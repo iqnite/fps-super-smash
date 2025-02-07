@@ -25,13 +25,13 @@ class Player(Sprite):
 
     def simulate(self):
         # X physics
-        self.x_move(self.x_velocity)
+        self.x_move_no_redraw(self.x_velocity)
         if self.collides_with_any():
-            self.x_move(-self.x_velocity)
+            self.x_move_no_redraw(-self.x_velocity)
             self.x_velocity = 0
         self.x_velocity -= self.x_velocity * self.friction
         # Y physics
-        self.y_move(self.y_velocity)
+        self.y_move_no_redraw(self.y_velocity)
         if self.collides_with_any():
             if self.y_velocity > 0:
                 self._backwards = -1
@@ -42,6 +42,7 @@ class Player(Sprite):
             self.y_velocity = 1
         else:
             self.y_velocity += self.gravity
+        self.draw()
 
     def read_controls(self):
         keys = pygame.key.get_pressed()
@@ -52,7 +53,7 @@ class Player(Sprite):
             self.image = self.default_image
             self.x_velocity += self.move_acceleration
         if keys[self.controls["jump"]]:
-            self.y += 1
+            self.y_move_no_redraw(1)
             if self.collides_with_any():
                 self.y_velocity = -self.jump_acceleration
-            self.y -= 1
+            self.y_move_no_redraw(1)

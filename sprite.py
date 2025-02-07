@@ -6,7 +6,7 @@ class GameContext:
         self,
         *,
         screen: pygame.Surface,
-        objects: dict[str, list] = {},
+        objects: dict = {},
         clock: pygame.time.Clock = pygame.time.Clock(),
         running: bool = True,
         dt: float = 0,
@@ -54,6 +54,10 @@ class Sprite:
     def x_move(self, value):
         self.x += value * self.ctx.dt
 
+    def x_move_no_redraw(self, value):
+        self.pos.x += value * self.ctx.dt
+        self.rect.x = int(self.x)
+
     @property
     def y(self):
         return self.pos.y
@@ -71,8 +75,12 @@ class Sprite:
         self.rect.y = int(self.y)
 
     def collides_with(self, other):
+        if not self.collidable:
+            return False
         if isinstance(other, str):
             return self.collides_with(self.ctx.objects[other])
+        if isinstance(other, MultiSprite):
+            return self.collides_with(other.sprites)
         if isinstance(other, list):
             return any(self.collides_with(obj) for obj in other)
         if isinstance(other, Sprite):
@@ -80,13 +88,65 @@ class Sprite:
 
     def collides_with_any(self):
         return any(
-            self.collides_with(obj)
-            for obj_set in self.ctx.objects.values()
-            for obj in obj_set
-            if obj.collidable and (obj is not self)
+            self.collides_with(obj.sprites if isinstance(obj, MultiSprite) else obj)
+            for obj in self.ctx.objects.values()
+            if obj is not self
+            and (
+                not isinstance(obj, MultiSprite)
+                or not any(sprite is self for sprite in obj.sprites)
+            )
         )
 
     def draw(self):
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)
         self.ctx.screen.blit(self.image, (self.x, self.y))
+
+
+class MultiSprite:
+    def __init__(self, ctx: GameContext, sprite_args):
+        self.sprites = [Sprite(ctx=ctx, **arg) for arg in sprite_args]
+
+    @property
+    def x(self):
+        return self.sprites[0].x
+
+    @x.setter
+    def x(self, value):
+        for sprite in self.sprites:
+            sprite.x = value
+
+    def x_move(self, value):
+        for sprite in self.sprites:
+            sprite.x_move(value)
+
+    def x_move_no_redraw(self, value):
+        for sprite in self.sprites:
+            sprite.x_move_no_redraw(value)
+
+    @property
+    def y(self):
+        return self.sprites[0].y
+
+    @y.setter
+    def y(self, value):
+        for sprite in self.sprites:
+            sprite.y = value
+
+    def y_move(self, value):
+        for sprite in self.sprites:
+            sprite.y_move(value)
+
+    def y_move_no_redraw(self, value):
+        for sprite in self.sprites:
+            sprite.y_move_no_redraw(value)
+
+    def collides_with(self, other):
+        return any(sprite.collides_with(other) for sprite in self.sprites)
+
+    def collides_with_any(self):
+        return any(sprite.collides_with_any() for sprite in self.sprites)
+
+    def draw(self):
+        for sprite in self.sprites:
+            sprite.draw()

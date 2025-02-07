@@ -1,5 +1,5 @@
 import pygame
-from sprite import GameContext, Sprite
+from sprite import GameContext, MultiSprite, Sprite
 from player import Player
 
 # pygame setup
@@ -12,14 +12,16 @@ LEVEL_MAP = [
     (ctx.screen.get_width() / 2 + 200, ctx.screen.get_height() / 2 + 100),
 ]
 
-level = [
-    Sprite(
-        ctx=ctx,
-        image_path=f"images/level{i}.png",
-        pos_vector=pygame.Vector2(*pos),
-    )
-    for i, pos in enumerate(LEVEL_MAP)
-]
+level = MultiSprite(
+    ctx,
+    [
+        {
+            "image_path": f"images/level{i}.png",
+            "pos_vector": pygame.Vector2(*pos),
+        }
+        for i, pos in enumerate(LEVEL_MAP)
+    ],
+)
 
 player = Player(
     ctx=ctx,
@@ -32,7 +34,7 @@ player = Player(
     gravity=300,
 )
 
-ctx.objects["player"] = [player]
+ctx.objects["player"] = player
 ctx.objects["level"] = level
 
 while ctx.running:
@@ -45,8 +47,7 @@ while ctx.running:
     # fill the screen with a color to wipe away anything from last frame
     ctx.screen.fill("black")
 
-    for obj in level:
-        obj.draw()
+    level.draw()
     player.read_controls()
     player.simulate()
 
