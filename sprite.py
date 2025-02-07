@@ -6,26 +6,39 @@ class GameContext:
         self,
         *,
         screen: pygame.Surface,
+        objects: dict = {},
         clock: pygame.time.Clock = pygame.time.Clock(),
         running: bool = True,
         dt: float = 0,
     ):
         self.screen = screen
+        self.objects = objects
         self.clock = clock
         self.running = running
         self.dt = dt
 
 
 class Sprite:
-    def __init__(self, ctx: GameContext, image_path: str, pos_vector=None, x=None, y=None):
+    def __init__(
+        self,
+        ctx: GameContext,
+        image_path: str,
+        pos_vector=None,
+        x=None,
+        y=None,
+        collidable=True,
+    ):
         self.ctx = ctx
         self.image = pygame.image.load(image_path)
-        if pos_vector:
+        if pos_vector is not None:
             self.pos = pos_vector
-        elif x and y:
+        elif x is not None and y is not None:
             self.pos = pygame.Vector2(x, y)
         else:
             raise ValueError("Either pos_vector or x and y must be provided")
+        self.collidable = collidable
+        self.draw()
+        self.rect = self.image.get_rect()
 
     @property
     def x(self):
@@ -39,11 +52,14 @@ class Sprite:
     @property
     def y(self):
         return self.pos.y
-    
+
     @y.setter
     def y(self, value):
         self.pos.y = value
         self.draw()
+
+    def collides_with(self, other):
+        return self.rect.colliderect(other.rect)
 
     def draw(self):
         self.ctx.screen.blit(self.image, (self.x, self.y))
