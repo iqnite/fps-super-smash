@@ -46,8 +46,10 @@ class Player(Sprite):
     def read_controls(self):
         keys = pygame.key.get_pressed()
         if keys[self.controls["left"]]:
+            self.image = self.flipped_image
             self.x_velocity -= self.move_acceleration
         if keys[self.controls["right"]]:
+            self.image = self.default_image
             self.x_velocity += self.move_acceleration
         if keys[self.controls["jump"]]:
             self.y += 1

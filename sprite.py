@@ -29,7 +29,9 @@ class Sprite:
         collidable=True,
     ):
         self.ctx = ctx
-        self.image = pygame.image.load(image_path)
+        self.default_image = pygame.image.load(image_path)
+        self.flipped_image = pygame.transform.flip(self.default_image, True, False)
+        self.image = self.default_image
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
