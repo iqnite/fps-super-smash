@@ -1,8 +1,0 @@
-{
-    "python.linting.pylintArgs": [
-        "--additional-builtins=screen,mouse,keys"
-    ],
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportUndefinedVariable": "none",
-    }
-}
