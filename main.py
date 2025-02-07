@@ -4,10 +4,21 @@ from player import Player
 
 # pygame setup
 pygame.init()
-ctx = GameContext(screen=pygame.display.set_mode((1920, 1080)))
+ctx = GameContext(screen=pygame.display.set_mode((0, 0)))  # (0, 0) means full screen
 
-level_map = [
-    Sprite(ctx=ctx, image_path="images/level0.png", pos_vector=pygame.Vector2(0, 0))
+LEVEL_MAP = [
+    (ctx.screen.get_width() / 2 - 200, ctx.screen.get_height() / 2 + 200),
+    (ctx.screen.get_width() / 2 - 200, ctx.screen.get_height() / 2),
+    (ctx.screen.get_width() / 2 + 200, ctx.screen.get_height() / 2 + 100),
+]
+
+level = [
+    Sprite(
+        ctx=ctx,
+        image_path=f"images/level{i}.png",
+        pos_vector=pygame.Vector2(*pos),
+    )
+    for i, pos in enumerate(LEVEL_MAP)
 ]
 
 player = Player(
@@ -16,13 +27,13 @@ player = Player(
     pos_vector=pygame.Vector2(ctx.screen.get_width() / 2, ctx.screen.get_height() / 2),
     controls={"left": pygame.K_a, "right": pygame.K_d, "jump": pygame.K_w},
     move_acceleration=300,
-    friction=0.1,
-    jump_acceleration=300,
+    friction=0.25,
+    jump_acceleration=3000,
     gravity=300,
 )
 
-ctx.objects["player"] = player
-ctx.objects["level_map"] = level_map
+ctx.objects["player"] = [player]
+ctx.objects["level"] = level
 
 while ctx.running:
     # poll for events
@@ -34,10 +45,10 @@ while ctx.running:
     # fill the screen with a color to wipe away anything from last frame
     ctx.screen.fill("black")
 
-    for obj in level_map:
+    for obj in level:
         obj.draw()
     player.read_controls()
-    player.simulate_x()
+    player.simulate()
 
     # flip() the display to put your work on screen
     pygame.display.flip()

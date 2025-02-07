@@ -6,7 +6,7 @@ class GameContext:
         self,
         *,
         screen: pygame.Surface,
-        objects: dict = {},
+        objects: dict[str, list] = {},
         clock: pygame.time.Clock = pygame.time.Clock(),
         running: bool = True,
         dt: float = 0,
@@ -37,8 +37,8 @@ class Sprite:
         else:
             raise ValueError("Either pos_vector or x and y must be provided")
         self.collidable = collidable
-        self.draw()
         self.rect = self.image.get_rect()
+        self.draw()
 
     @property
     def x(self):
@@ -49,6 +49,9 @@ class Sprite:
         self.pos.x = value
         self.draw()
 
+    def x_move(self, value):
+        self.x += value * self.ctx.dt
+
     @property
     def y(self):
         return self.pos.y
@@ -58,8 +61,30 @@ class Sprite:
         self.pos.y = value
         self.draw()
 
+    def y_move(self, value):
+        self.y += value * self.ctx.dt
+
+    def y_move_no_redraw(self, value):
+        self.pos.y += value * self.ctx.dt
+        self.rect.y = int(self.y)
+
     def collides_with(self, other):
-        return self.rect.colliderect(other.rect)
+        if isinstance(other, str):
+            return self.collides_with(self.ctx.objects[other])
+        if isinstance(other, list):
+            return any(self.collides_with(obj) for obj in other)
+        if isinstance(other, Sprite):
+            return self.rect.colliderect(other.rect)
+
+    def collides_with_any(self):
+        return any(
+            self.collides_with(obj)
+            for obj_set in self.ctx.objects.values()
+            for obj in obj_set
+            if obj.collidable and (obj is not self)
+        )
 
     def draw(self):
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)
         self.ctx.screen.blit(self.image, (self.x, self.y))
