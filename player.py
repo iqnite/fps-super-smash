@@ -56,4 +56,4 @@ class Player(Sprite):
             self.y_move_no_redraw(1)
             if self.collides_with_any():
                 self.y_velocity = -self.jump_acceleration
-            self.y_move_no_redraw(1)
+            self.y_move_no_redraw(-1)
