@@ -111,11 +111,6 @@ class MultiSprite:
     def x(self):
         return self.sprites[0].x
 
-    @x.setter
-    def x(self, value):
-        for sprite in self.sprites:
-            sprite.x = value
-
     def x_move(self, value):
         for sprite in self.sprites:
             sprite.x_move(value)
@@ -127,11 +122,6 @@ class MultiSprite:
     @property
     def y(self):
         return self.sprites[0].y
-
-    @y.setter
-    def y(self, value):
-        for sprite in self.sprites:
-            sprite.y = value
 
     def y_move(self, value):
         for sprite in self.sprites:
