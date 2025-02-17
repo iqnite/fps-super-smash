@@ -1,28 +1,13 @@
 import pygame
-from sprite import GameContext, MultiSprite, Sprite
+from sprite import GameContext
+from level import Level
 from player import Player
 
 # pygame setup
 pygame.init()
 ctx = GameContext(screen=pygame.display.set_mode((0, 0)))  # (0, 0) means full screen
 
-LEVEL_MAP = [
-    (ctx.screen.get_width() / 2 - 200, ctx.screen.get_height() / 2 + 200),
-    (ctx.screen.get_width() / 2 - 200, ctx.screen.get_height() / 2),
-    (ctx.screen.get_width() / 2 + 200, ctx.screen.get_height() / 2 + 100),
-]
-
-level = MultiSprite(
-    ctx,
-    [
-        {
-            "image_path": f"images/level{i}.png",
-            "pos_vector": pygame.Vector2(*pos),
-        }
-        for i, pos in enumerate(LEVEL_MAP)
-    ],
-)
-
+level = Level.load(ctx, "level.txt", "images/level{}.png")
 player = Player(
     ctx=ctx,
     image_path="images/player0.png",
