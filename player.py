@@ -43,6 +43,8 @@ class Player(Sprite):
         else:
             self.y_velocity += self.gravity
         self.draw()
+        if self.y > self.ctx.screen.get_height():
+            self.on_fall()
 
     def read_controls(self):
         keys = pygame.key.get_pressed()
@@ -57,3 +59,7 @@ class Player(Sprite):
             if self.collides_with_any():
                 self.y_velocity = -self.jump_acceleration
             self.y_move_no_redraw(-1)
+
+    def on_fall(self):
+        self.y = 0
+        self.y_velocity = 0
