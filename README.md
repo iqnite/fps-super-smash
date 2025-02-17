@@ -1,3 +1,3 @@
-# SuperSmash my FPS Studios
+# SuperSmash by FPS Studios
 
 More details coming soon. Check the Projects tab for info.
