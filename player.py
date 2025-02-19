@@ -62,7 +62,10 @@ class Player(Sprite):
                 self.y_velocity = -self.jump_acceleration
             self.y_move_no_redraw(-1)
         else:
-            self._jumps = 0
+            self.y_move_no_redraw(1)
+            if self.collides_with_any():
+                self._jumps = 0
+            self.y_move_no_redraw(-1)
 
     def on_fall(self):
         self.y = 0
