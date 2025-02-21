@@ -117,6 +117,7 @@ class Sprite:
 
 class MultiSprite:
     def __init__(self, ctx: GameContext, sprite_args):
+        self.ctx = ctx
         self.sprites = [Sprite(ctx=ctx, **arg) for arg in sprite_args]
 
     @property
