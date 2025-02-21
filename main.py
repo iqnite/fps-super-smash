@@ -15,8 +15,8 @@ player = Player(
     controls={"left": pygame.K_a, "right": pygame.K_d, "jump": pygame.K_w},
     move_acceleration=300,
     friction=0.25,
-    jump_acceleration=3000,
-    gravity=300,
+    jump_acceleration=1200,
+    gravity=100,
     teleport=["bottom"],
 )
 

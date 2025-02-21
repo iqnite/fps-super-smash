@@ -22,7 +22,6 @@ class Player(Sprite):
         self.x_velocity = 0
         self.y_velocity = 1
         self._backwards = 1
-        self._jumps = 0
 
     def simulate(self):
         # X physics
@@ -32,12 +31,12 @@ class Player(Sprite):
             self.x_velocity = 0
         self.x_velocity -= self.x_velocity * self.friction
         # Y physics
-        self.y_move_no_redraw(self.y_velocity)
+        self.y_move(self.y_velocity)
         if self.collides_with_any():
-            if self.y_velocity > 0:
-                self._backwards = -1
-            else:
+            if self.y_velocity < 0:
                 self._backwards = 1
+            else:
+                self._backwards = -1
             while self.collides_with_any():
                 self.y_move_no_redraw(self._backwards)
             self.y_velocity = 1
@@ -55,8 +54,7 @@ class Player(Sprite):
             self.x_velocity += self.move_acceleration
         if keys[self.controls["jump"]]:
             self.y_move_no_redraw(1)
-            if self._jumps == 0 and self.collides_with_any():
-                self._jumps += 1
+            if self.collides_with_any() and self.y_velocity > 0:
                 self.y_velocity = -self.jump_acceleration
             self.y_move_no_redraw(-1)
         else:
