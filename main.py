@@ -8,7 +8,8 @@ pygame.init()
 ctx = GameContext(screen=pygame.display.set_mode((0, 0)))  # (0, 0) means full screen
 
 level = Level.load(ctx, "level.txt", "images/level{}.png")
-player1 = Player(
+players = []
+players.append (Player(
     ctx=ctx,
     image_path="images/player0.png",
     pos_vector=pygame.Vector2(ctx.screen.get_width() / 2, ctx.screen.get_height() / 2),
@@ -17,9 +18,9 @@ player1 = Player(
     friction=0.25,
     jump_acceleration=3000,
     gravity=300,
-)
+))
 
-player2 = Player(
+players.append (Player(
     ctx=ctx,
     image_path="images/player1.png",
     pos_vector=pygame.Vector2(ctx.screen.get_width() / 2 + 100, ctx.screen.get_height() / 2 + 100),
@@ -28,10 +29,9 @@ player2 = Player(
     friction=0.25,
     jump_acceleration=3000,
     gravity=300,
-)
+))
 
-ctx.objects["player1"] = player1
-ctx.objects["player2"] = player2
+ctx.objects["players"] = players
 ctx.objects["level"] = level
 
 while ctx.running:
@@ -45,10 +45,10 @@ while ctx.running:
     ctx.screen.fill("black")
 
     level.draw()
-    player1.read_controls()
-    player1.simulate()
-    player2.read_controls()
-    player2.simulate()
+    for i in range (0, len(players)):
+        players[i].read_controls()
+        players[i].simulate()
+    
 
 
     # flip() the display to put your work on screen
