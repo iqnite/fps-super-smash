@@ -20,7 +20,7 @@ class Player(Sprite):
         self.jump_acceleration = jump_acceleration
         self.gravity = gravity
         self.x_velocity = 0
-        self.y_velocity = self.gravity
+        self.y_velocity = -1
         self._backwards = 1
 
     def loop(self):
@@ -56,7 +56,7 @@ class Player(Sprite):
         if keys[self.controls["right"]]:
             self.image = self.default_image
             self.x_velocity += self.move_acceleration
-        if True or keys[self.controls["jump"]]:#FIXME:
+        if keys[self.controls["jump"]]:
             self.y_move(1)
             if self.collides_with_any() and self.y_velocity > 0:
                 self.y_velocity = -self.jump_acceleration

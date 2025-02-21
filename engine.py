@@ -58,6 +58,8 @@ class Sprite:
             raise ValueError("Either pos_vector or x and y must be provided")
         self.collidable = collidable
         self.rect = self.image.get_rect()
+        self.rect.x = int(self.pos.x)
+        self.rect.y = int(self.pos.y)
 
     def loop(self):
         self.check_teleport()
@@ -70,7 +72,7 @@ class Sprite:
     @x.setter
     def x(self, value):
         self.pos.x = value
-        self.rect.x = int(self.x)
+        self.rect.x = int(self.pos.x)
 
     def x_move(self, value):
         self.x += value * self.game.dt
@@ -82,7 +84,7 @@ class Sprite:
     @y.setter
     def y(self, value):
         self.pos.y = value
-        self.rect.y = int(self.y)
+        self.rect.y = int(self.pos.y)
 
     def y_move(self, value):
         self.y += value * self.game.dt
