@@ -27,8 +27,10 @@ class Sprite:
         x=None,
         y=None,
         collidable=True,
+        teleport=[],
     ):
         self.ctx = ctx
+        self.teleport = teleport
         self.default_image = pygame.image.load(image_path)
         self.flipped_image = pygame.transform.flip(self.default_image, True, False)
         self.image = self.default_image
@@ -97,6 +99,16 @@ class Sprite:
             )
         )
 
+    def check_teleport(self):
+        if "top" in self.teleport and self.y < 0:
+            self.y = self.ctx.screen.get_height()
+        if "bottom" in self.teleport and self.y > self.ctx.screen.get_height():
+            self.y = 0
+        if "left" in self.teleport and self.x < 0:
+            self.x = self.ctx.screen.get_width()
+        if "right" in self.teleport and self.x > self.ctx.screen.get_width():
+            self.x = 0
+
     def draw(self):
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)
@@ -136,6 +148,10 @@ class MultiSprite:
 
     def collides_with_any(self):
         return any(sprite.collides_with_any() for sprite in self.sprites)
+
+    def check_teleport(self):
+        for sprite in self.sprites:
+            sprite.check_teleport()
 
     def draw(self):
         for sprite in self.sprites:

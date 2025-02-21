@@ -17,6 +17,7 @@ player = Player(
     friction=0.25,
     jump_acceleration=3000,
     gravity=300,
+    teleport=["bottom"],
 )
 
 ctx.objects["player"] = player
@@ -35,6 +36,7 @@ while ctx.running:
     level.draw()
     player.read_controls()
     player.simulate()
+    player.check_teleport()
 
     # flip() the display to put your work on screen
     pygame.display.flip()
