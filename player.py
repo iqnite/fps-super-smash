@@ -20,8 +20,9 @@ class Player(Sprite):
         self.jump_acceleration = jump_acceleration
         self.gravity = gravity
         self.x_velocity = 0
-        self.y_velocity = 0
+        self.y_velocity = 1
         self._backwards = 1
+        self._jumps = 0
 
     def simulate(self):
         # X physics
@@ -54,7 +55,8 @@ class Player(Sprite):
             self.x_velocity += self.move_acceleration
         if keys[self.controls["jump"]]:
             self.y_move_no_redraw(1)
-            if self.collides_with_any():
+            if self._jumps == 0 and self.collides_with_any():
+                self._jumps += 1
                 self.y_velocity = -self.jump_acceleration
             self.y_move_no_redraw(-1)
         else:
