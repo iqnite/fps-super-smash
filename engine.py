@@ -1,27 +1,43 @@
 import pygame
 
 
-class GameContext:
-    def __init__(
-        self,
-        *,
-        screen: pygame.Surface,
-        objects: dict = {},
-        clock: pygame.time.Clock = pygame.time.Clock(),
-        running: bool = True,
-        dt: float = 0,
-    ):
-        self.screen = screen
-        self.objects = objects
-        self.clock = clock
-        self.running = running
-        self.dt = dt
+class Game:
+    def __init__(self, screen_size):
+        pygame.init()
+        self.screen = pygame.display.set_mode(screen_size)
+        self.objects = {}
+        self.clock = pygame.time.Clock()
+        self.running = True
+        self.dt = 0
+
+    def main(self, func=None):
+        while self.running:
+            # poll for events
+            # pygame.QUIT event means the user clicked X to close your window
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+            if func:
+                func()
+            for obj in self.objects.values():
+                if obj.loop:
+                    obj.loop()
+            # flip() the display to put your work on screen
+            pygame.display.flip()
+            # limits FPS to 60
+            # dt is delta time in seconds since last frame, used for framerate-
+            # independent physics.
+            self.dt = self.clock.tick(60) / 1000
+        pygame.quit()
+
+    def add_object(self, name, func, *args, **kwargs):
+        self.objects[name] = func(self, *args, **kwargs)
 
 
 class Sprite:
     def __init__(
         self,
-        ctx: GameContext,
+        game: Game,
         image_path: str,
         pos_vector=None,
         x=None,
@@ -29,7 +45,7 @@ class Sprite:
         collidable=True,
         teleport=[],
     ):
-        self.ctx = ctx
+        self.game = game
         self.teleport = teleport
         self.default_image = pygame.image.load(image_path)
         self.flipped_image = pygame.transform.flip(self.default_image, True, False)
@@ -42,6 +58,9 @@ class Sprite:
             raise ValueError("Either pos_vector or x and y must be provided")
         self.collidable = collidable
         self.rect = self.image.get_rect()
+
+    def loop(self):
+        self.check_teleport()
         self.draw()
 
     @property
@@ -51,14 +70,10 @@ class Sprite:
     @x.setter
     def x(self, value):
         self.pos.x = value
-        self.draw()
+        self.rect.x = int(self.x)
 
     def x_move(self, value):
-        self.x += value * self.ctx.dt
-
-    def x_move_no_redraw(self, value):
-        self.pos.x += value * self.ctx.dt
-        self.rect.x = int(self.x)
+        self.x += value * self.game.dt
 
     @property
     def y(self):
@@ -67,20 +82,16 @@ class Sprite:
     @y.setter
     def y(self, value):
         self.pos.y = value
-        self.draw()
+        self.rect.y = int(self.y)
 
     def y_move(self, value):
-        self.y += value * self.ctx.dt
-
-    def y_move_no_redraw(self, value):
-        self.pos.y += value * self.ctx.dt
-        self.rect.y = int(self.y)
+        self.y += value * self.game.dt
 
     def collides_with(self, other):
         if not self.collidable:
             return False
         if isinstance(other, str):
-            return self.collides_with(self.ctx.objects[other])
+            return self.collides_with(self.game.objects[other])
         if isinstance(other, MultiSprite):
             return self.collides_with(other.sprites)
         if isinstance(other, list):
@@ -91,7 +102,7 @@ class Sprite:
     def collides_with_any(self):
         return any(
             self.collides_with(obj.sprites if isinstance(obj, MultiSprite) else obj)
-            for obj in self.ctx.objects.values()
+            for obj in self.game.objects.values()
             if obj is not self
             and (
                 not isinstance(obj, MultiSprite)
@@ -101,24 +112,26 @@ class Sprite:
 
     def check_teleport(self):
         if "top" in self.teleport and self.y < 0:
-            self.y = self.ctx.screen.get_height()
-        if "bottom" in self.teleport and self.y > self.ctx.screen.get_height():
+            self.y = self.game.screen.get_height()
+        if "bottom" in self.teleport and self.y > self.game.screen.get_height():
             self.y = 0
         if "left" in self.teleport and self.x < 0:
-            self.x = self.ctx.screen.get_width()
-        if "right" in self.teleport and self.x > self.ctx.screen.get_width():
+            self.x = self.game.screen.get_width()
+        if "right" in self.teleport and self.x > self.game.screen.get_width():
             self.x = 0
 
     def draw(self):
-        self.rect.x = int(self.x)
-        self.rect.y = int(self.y)
-        self.ctx.screen.blit(self.image, (self.x, self.y))
+        self.game.screen.blit(self.image, (self.x, self.y))
 
 
 class MultiSprite:
-    def __init__(self, ctx: GameContext, sprite_args):
-        self.ctx = ctx
-        self.sprites = [Sprite(ctx=ctx, **arg) for arg in sprite_args]
+    def __init__(self, game: Game, sprite_args):
+        self.game = game
+        self.sprites = [Sprite(game=game, **arg) for arg in sprite_args]
+
+    def loop(self):
+        for sprite in self.sprites:
+            sprite.loop()
 
     @property
     def x(self):
@@ -128,10 +141,6 @@ class MultiSprite:
         for sprite in self.sprites:
             sprite.x_move(value)
 
-    def x_move_no_redraw(self, value):
-        for sprite in self.sprites:
-            sprite.x_move_no_redraw(value)
-
     @property
     def y(self):
         return self.sprites[0].y
@@ -139,10 +148,6 @@ class MultiSprite:
     def y_move(self, value):
         for sprite in self.sprites:
             sprite.y_move(value)
-
-    def y_move_no_redraw(self, value):
-        for sprite in self.sprites:
-            sprite.y_move_no_redraw(value)
 
     def collides_with(self, other):
         return any(sprite.collides_with(other) for sprite in self.sprites)

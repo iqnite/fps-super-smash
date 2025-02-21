@@ -1,33 +1,38 @@
 import pygame
-from sprite import Sprite
+from engine import Game, Sprite
 
 
 class Player(Sprite):
     def __init__(
         self,
-        *,
+        game: Game,
         controls: dict,
-        move_acceleration,
-        friction,
-        jump_acceleration,
-        gravity,
+        move_acceleration: float,
+        friction: float,
+        jump_acceleration: float,
+        gravity: float,
         **kwargs
     ):
-        super().__init__(**kwargs)
+        super().__init__(game, **kwargs)
         self.controls = controls
         self.move_acceleration = move_acceleration
         self.friction = friction
         self.jump_acceleration = jump_acceleration
         self.gravity = gravity
         self.x_velocity = 0
-        self.y_velocity = 1
+        self.y_velocity = self.gravity
         self._backwards = 1
+
+    def loop(self):
+        self.read_controls()
+        self.simulate()
+        super().loop()
 
     def simulate(self):
         # X physics
-        self.x_move_no_redraw(self.x_velocity)
+        self.x_move(self.x_velocity)
         if self.collides_with_any():
-            self.x_move_no_redraw(-self.x_velocity)
+            self.x_move(-self.x_velocity)
             self.x_velocity = 0
         self.x_velocity -= self.x_velocity * self.friction
         # Y physics
@@ -38,11 +43,10 @@ class Player(Sprite):
             else:
                 self._backwards = -1
             while self.collides_with_any():
-                self.y_move_no_redraw(self._backwards)
+                self.y_move(self._backwards)
             self.y_velocity = 1
         else:
             self.y_velocity += self.gravity
-        self.draw()
 
     def read_controls(self):
         keys = pygame.key.get_pressed()
@@ -52,13 +56,8 @@ class Player(Sprite):
         if keys[self.controls["right"]]:
             self.image = self.default_image
             self.x_velocity += self.move_acceleration
-        if keys[self.controls["jump"]]:
-            self.y_move_no_redraw(1)
+        if True or keys[self.controls["jump"]]:#FIXME:
+            self.y_move(1)
             if self.collides_with_any() and self.y_velocity > 0:
                 self.y_velocity = -self.jump_acceleration
-            self.y_move_no_redraw(-1)
-        else:
-            self.y_move_no_redraw(1)
-            if self.collides_with_any():
-                self._jumps = 0
-            self.y_move_no_redraw(-1)
+            self.y_move(-1)
