@@ -58,6 +58,6 @@ class Player(Sprite):
             self.x_velocity += self.move_acceleration
         if keys[self.controls["jump"]]:
             self.y_move(1)
-            if self.collides_with_any() and self.y_velocity > 0:
+            if self.collides_with_any():
                 self.y_velocity = -self.jump_acceleration
             self.y_move(-1)
