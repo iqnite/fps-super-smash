@@ -75,7 +75,8 @@ class Sprite:
         self.rect.x = int(self.pos.x)
 
     def x_move(self, value):
-        self.x += value * self.game.dt
+        for _ in range(abs(int(value))):
+            self.x += self.game.dt * abs(value) / value
 
     @property
     def y(self):
@@ -87,7 +88,8 @@ class Sprite:
         self.rect.y = int(self.pos.y)
 
     def y_move(self, value):
-        self.y += value * self.game.dt
+        for _ in range(abs(int(value))):
+            self.y += self.game.dt * abs(value) / value
 
     def collides_with(self, other):
         if not self.collidable:
