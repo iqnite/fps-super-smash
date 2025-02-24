@@ -74,7 +74,7 @@ class TestSprite(unittest.TestCase):
         self.assertTrue(self.sprite.collides_with_any())
 
     def test_check_teleport(self):
-        self.sprite.teleport = ["top"]
+        self.sprite.teleport = {"+y": {-10: self.game.screen.get_height()}}
         self.sprite.y = -10
         self.sprite.check_teleport()
         self.assertEqual(self.sprite.y, self.game.screen.get_height())
@@ -130,7 +130,9 @@ class TestMultiSprite(unittest.TestCase):
         self.assertTrue(self.multi_sprite.collides_with_any())
 
     def test_check_teleport(self):
-        self.multi_sprite.sprites[0].teleport = ["top"]
+        self.multi_sprite.sprites[0].teleport = {
+            "+y": {-10: self.game.screen.get_height()}
+        }
         self.multi_sprite.sprites[0].y = -10
         self.multi_sprite.check_teleport()
         self.assertEqual(self.multi_sprite.sprites[0].y, self.game.screen.get_height())
