@@ -59,14 +59,14 @@ class TestSprite(unittest.TestCase):
         self.assertNotEqual(self.sprite.y, 100)  # Since dt is not set, it will change
 
     def test_collides_with(self):
-        other_sprite = Sprite(self.game, "images/level0.png", x=150, y=150)
+        other_sprite = Sprite(self.game, "images/level0.png", x=1000000, y=1000000)
         self.assertFalse(self.sprite.collides_with(other_sprite))
         other_sprite.x = 100
         other_sprite.y = 100
         self.assertTrue(self.sprite.collides_with(other_sprite))
 
     def test_collides_with_any(self):
-        other_sprite = Sprite(self.game, "images/level0.png", x=150, y=150)
+        other_sprite = Sprite(self.game, "images/level0.png", x=1000000, y=1000000)
         self.game.add_object("other", lambda game: other_sprite)
         self.assertFalse(self.sprite.collides_with_any())
         other_sprite.x = 100
@@ -115,14 +115,14 @@ class TestMultiSprite(unittest.TestCase):
         )  # Since dt is not set, it will change
 
     def test_collides_with(self):
-        other_sprite = Sprite(self.game, "images/level0.png", x=150, y=150)
+        other_sprite = Sprite(self.game, "images/level0.png", x=1000000, y=1000000)
         self.assertFalse(self.multi_sprite.collides_with(other_sprite))
         other_sprite.x = 100
         other_sprite.y = 100
         self.assertTrue(self.multi_sprite.collides_with(other_sprite))
 
     def test_collides_with_any(self):
-        other_sprite = Sprite(self.game, "images/level0.png", x=150, y=150)
+        other_sprite = Sprite(self.game, "images/level0.png", x=1000000, y=1000000)
         self.game.add_object("other", lambda game: other_sprite)
         self.assertFalse(self.multi_sprite.collides_with_any())
         other_sprite.x = 100
