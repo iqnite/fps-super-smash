@@ -10,7 +10,6 @@ PLAYER_DEFAULTS = {
     "friction": 0.25,
     "jump_acceleration": 1200,
     "gravity": 100,
-    "teleport": ["bottom"],
 }
 game.add_object(
     "player0",
@@ -31,7 +30,12 @@ game.add_object(
     **PLAYER_DEFAULTS,
 )
 game.add_object(
-    "level", Level.load, pos_filepath="level.txt", image_filepath="images/level{}.png"
+    "level",
+    Level.load,
+    pos_filepath="level.txt",
+    image_filepath="images/level{}.png",
+    y_velocity=10,
+    common_sprite_args={"teleport": {"+y": {game.screen.get_height(): 0}}},
 )
 
 game.main(
