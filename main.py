@@ -31,7 +31,12 @@ game.add_object(
     **PLAYER_DEFAULTS,
 )
 game.add_object(
-    "level", Level.load, pos_filepath="level.txt", image_filepath="images/level{}.png"
+    "level",
+    Level.load,
+    pos_filepath="level.txt",
+    image_filepath="images/level{}.png",
+    y_velocity=10,
+    common_sprite_args={"teleport": {"+y": {game.screen.get_height(): 0}}},
 )
 
 game.main(
