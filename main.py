@@ -10,7 +10,6 @@ PLAYER_DEFAULTS = {
     "friction": 0.25,
     "jump_acceleration": 1200,
     "gravity": 100,
-    "teleport": {"+y": {game.screen.get_height(): 0}},
 }
 game.add_object(
     "player0",
