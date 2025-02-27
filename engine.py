@@ -31,7 +31,9 @@ class Game:
         pygame.quit()
 
     def add_object(self, name, func, *args, **kwargs):
-        self.objects[name] = func(self, *args, **kwargs)
+        obj = func(self, *args, **kwargs)
+        self.objects[name] = obj
+        return obj
 
 
 class Sprite:
@@ -164,3 +166,40 @@ class MultiSprite:
     def draw(self):
         for sprite in self.sprites:
             sprite.draw()
+
+
+class Button(Sprite):
+    def __init__(self, game: Game, image_path: str, x, y, func):
+        super().__init__(game, image_path, x=x, y=y, collidable=False)
+        self.func = func
+
+    def loop(self):
+        super().loop()
+        # TODO: Implement button logic
+
+
+def button(image_path: str):
+    def decorator(func):
+        func._engine_type_ = Button
+        func._engine_args_ = {"func": func, "image_path": image_path}
+        return func
+
+    return decorator
+
+
+class Menu:
+    def __init__(self, game: Game, button_distance: int):
+        self.buttons = [
+            func._engine_type_(
+                **getattr(self, name)._engine_args_,
+                game=game,
+                x=0,
+                y=i * button_distance
+            )
+            for i, (name, func) in enumerate(self.__class__.__dict__.items())
+            if hasattr(func, "_engine_type_")
+        ]
+
+    def loop(self):
+        for button in self.buttons:
+            button.loop()
