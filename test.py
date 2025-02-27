@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import mock_open, patch
 import pygame
-from engine import Game, Sprite, MultiSprite
+from engine import Button, Game, Menu, Sprite, MultiSprite, button
 from level import Level
 from player import Player
 
@@ -137,6 +137,60 @@ class TestMultiSprite(unittest.TestCase):
 
     def test_draw(self):
         self.multi_sprite.draw()
+        # No assertion, just ensure no exceptions
+
+
+class TestButton(unittest.TestCase):
+
+    def setUp(self):
+        self.game = Game((800, 600))
+        self.button = Button(
+            self.game, "images/level0.png", x=100, y=100, func=self.dummy_func
+        )
+        self.dummy_var = 0
+
+    def dummy_func(self):
+        self.dummy_var = 1
+
+    def test_init(self):
+        self.assertEqual(self.button.func, self.dummy_func)
+
+    def test_loop(self):
+        with patch.object(Sprite, "loop") as mock_super_loop:
+            self.button.loop()
+            mock_super_loop.assert_called_once()
+            # Mock mouse click on button
+        with patch(
+            "pygame.mouse.get_pressed", return_value=[True, False, False]
+        ), patch("pygame.mouse.get_pos", return_value=(100, 100)):
+            self.button.loop()
+            # Assert function was called
+            self.assertEqual(self.dummy_var, 1)
+
+
+class TestMenu(unittest.TestCase):
+    class Menu1(Menu):
+        @button("images/level0.png")
+        def dummy1():
+            return 1
+
+        @button("images/level0.png")
+        def dummy2():
+            return 2
+
+    def setUp(self):
+        self.game = Game((800, 600))
+        self.button_distance = 10
+        self.menu = self.Menu1(self.game, 10)
+
+    def test_init(self):
+        self.assertIsInstance(self.menu.buttons, list)
+        self.assertEqual(len(self.menu.buttons), 2)
+        self.assertEqual(self.menu.buttons[0].func(), 1)
+        self.assertEqual(self.menu.buttons[1].func(), 2)
+
+    def test_loop(self):
+        self.menu.loop()
         # No assertion, just ensure no exceptions
 
 
