@@ -13,8 +13,8 @@ class Level(MultiSprite):
                 {
                     "image_path": image_filepath.format(i),
                     "pos_vector": pygame.Vector2(
-                        game.screen.get_width() / 2 + int(pos.split(",")[0]),
-                        game.screen.get_height() / 2 + int(pos.split(",")[1]),
+                        game.width / 2 + int(pos.split(",")[0]),
+                        game.height / 2 + int(pos.split(",")[1]),
                     ),
                 }
                 for i, pos in enumerate(data)

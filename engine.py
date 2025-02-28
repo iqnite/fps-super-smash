@@ -35,6 +35,14 @@ class Game:
         self.objects[name] = obj
         return obj
 
+    @property
+    def width(self):
+        return self.screen.get_width()
+
+    @property
+    def height(self):
+        return self.screen.get_height()
+
 
 class Sprite:
     def __init__(
@@ -116,12 +124,12 @@ class Sprite:
 
     def check_teleport(self):
         if "top" in self.teleport and self.y < 0:
-            self.y = self.game.screen.get_height()
-        if "bottom" in self.teleport and self.y > self.game.screen.get_height():
+            self.y = self.game.height
+        if "bottom" in self.teleport and self.y > self.game.height:
             self.y = 0
         if "left" in self.teleport and self.x < 0:
-            self.x = self.game.screen.get_width()
-        if "right" in self.teleport and self.x > self.game.screen.get_width():
+            self.x = self.game.width
+        if "right" in self.teleport and self.x > self.game.width:
             self.x = 0
 
     def draw(self):
@@ -194,8 +202,8 @@ class Menu:
                 **getattr(self, name)._engine_kwargs_,
                 func=func,
                 game=game,
-                x=0,
-                y=i * button_distance
+                x=game.width / 2,
+                y=game.height / 2 + i * button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")

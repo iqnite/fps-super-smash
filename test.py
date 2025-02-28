@@ -77,7 +77,7 @@ class TestSprite(unittest.TestCase):
         self.sprite.teleport = ["top"]
         self.sprite.y = -10
         self.sprite.check_teleport()
-        self.assertEqual(self.sprite.y, self.game.screen.get_height())
+        self.assertEqual(self.sprite.y, self.game.height)
 
     def test_draw(self):
         self.sprite.draw()
@@ -133,7 +133,7 @@ class TestMultiSprite(unittest.TestCase):
         self.multi_sprite.sprites[0].teleport = ["top"]
         self.multi_sprite.sprites[0].y = -10
         self.multi_sprite.check_teleport()
-        self.assertEqual(self.multi_sprite.sprites[0].y, self.game.screen.get_height())
+        self.assertEqual(self.multi_sprite.sprites[0].y, self.game.height)
 
     def test_draw(self):
         self.multi_sprite.draw()
