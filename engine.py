@@ -183,7 +183,10 @@ class Button(Sprite):
 
     def loop(self):
         super().loop()
-        # TODO: Implement button logic
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.MOUSEBUTTONDOWN:
+                self.func()
+
 
 
 def button(image_path: str):
