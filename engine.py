@@ -31,7 +31,17 @@ class Game:
         pygame.quit()
 
     def add_object(self, name, func, *args, **kwargs):
-        self.objects[name] = func(self, *args, **kwargs)
+        obj = func(self, *args, **kwargs)
+        self.objects[name] = obj
+        return obj
+
+    @property
+    def width(self):
+        return self.screen.get_width()
+
+    @property
+    def height(self):
+        return self.screen.get_height()
 
 
 class Sprite:
@@ -114,12 +124,12 @@ class Sprite:
 
     def check_teleport(self):
         if "top" in self.teleport and self.y < 0:
-            self.y = self.game.screen.get_height()
-        if "bottom" in self.teleport and self.y > self.game.screen.get_height():
+            self.y = self.game.height
+        if "bottom" in self.teleport and self.y > self.game.height:
             self.y = 0
         if "left" in self.teleport and self.x < 0:
-            self.x = self.game.screen.get_width()
-        if "right" in self.teleport and self.x > self.game.screen.get_width():
+            self.x = self.game.width
+        if "right" in self.teleport and self.x > self.game.width:
             self.x = 0
 
     def draw(self):
@@ -164,3 +174,44 @@ class MultiSprite:
     def draw(self):
         for sprite in self.sprites:
             sprite.draw()
+
+
+class Button(Sprite):
+    def __init__(self, game: Game, image_path: str, x, y, func):
+        super().__init__(game, image_path, x=x, y=y, collidable=False)
+        self.func = func
+
+    def loop(self):
+        super().loop()
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.MOUSEBUTTONDOWN:
+                self.func()
+
+
+
+def button(image_path: str):
+    def decorator(func):
+        func._engine_type_ = Button
+        func._engine_kwargs_ = {"image_path": image_path}
+        return func
+
+    return decorator
+
+
+class Menu:
+    def __init__(self, game: Game, button_distance: int):
+        self.buttons = [
+            func._engine_type_(
+                **getattr(self, name)._engine_kwargs_,
+                func=func,
+                game=game,
+                x=game.width / 2,
+                y=game.height / 2 + i * button_distance
+            )
+            for i, (name, func) in enumerate(self.__class__.__dict__.items())
+            if hasattr(func, "_engine_type_")
+        ]
+
+    def loop(self):
+        for button in self.buttons:
+            button.loop()
