@@ -6,10 +6,10 @@ from player import Player
 game = engine.Game((0, 0))  # (0, 0) means full screen
 
 PLAYER_DEFAULTS = {
-    "move_acceleration": 300,
+    "move_acceleration": 4,
     "friction": 0.25,
-    "jump_acceleration": 1200,
-    "gravity": 100,
+    "jump_acceleration": 24,
+    "gravity": 2,
 }
 game.add_object(
     "player0",
@@ -34,7 +34,7 @@ game.add_object(
     Level.load,
     pos_filepath="level.txt",
     image_filepath="images/level{}.png",
-    y_velocity=10,
+    y_velocity=1,
     common_sprite_args={"teleport": {"+y": {game.screen.get_height(): 0}}},
 )
 

@@ -76,7 +76,7 @@ class Sprite:
 
     def x_move(self, value):
         for _ in range(abs(int(value))):
-            self.x += self.game.dt * abs(value) / value
+            self.x += abs(value) / value
 
     @property
     def y(self):
@@ -89,7 +89,7 @@ class Sprite:
 
     def y_move(self, value):
         for _ in range(abs(int(value))):
-            self.y += self.game.dt * abs(value) / value
+            self.y += abs(value) / value
 
     def collides_with(self, other):
         if not self.collidable:
