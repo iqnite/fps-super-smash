@@ -35,7 +35,7 @@ game.add_object(
     pos_filepath="level.csv",
     image_filepath="images/level/{}.png",
     y_velocity=1,
-    common_sprite_args={"teleport": {"+y": {game.screen.get_height(): -100}}},
+    common_sprite_args={"teleport": {"+y": {game.screen.get_height(): 200}}},
 )
 
 game.main(

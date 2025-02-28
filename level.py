@@ -16,12 +16,13 @@ class Level(MultiSprite):
                     {
                         "image_path": image_filepath.format(i),
                         "pos_vector": pygame.Vector2(
-                            ctx.screen.get_width() / 2 + int(pos.split(",")[0]),
-                            ctx.screen.get_height() / 2 + int(pos.split(",")[1]),
+                            ctx.screen.get_width() / 2 + int(line.split(",")[0]),
+                            ctx.screen.get_height() / 2 + int(line.split(",")[1]),
                         ),
                     } | common_sprite_args
                 )
-                for i, pos in enumerate(data)
+                for i, line in enumerate(data)
+                if line
             ],
             *args,
             **kwargs
