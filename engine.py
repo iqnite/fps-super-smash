@@ -181,7 +181,7 @@ class Button(Sprite):
 def button(image_path: str):
     def decorator(func):
         func._engine_type_ = Button
-        func._engine_args_ = {"func": func, "image_path": image_path}
+        func._engine_kwargs_ = {"image_path": image_path}
         return func
 
     return decorator
@@ -191,7 +191,8 @@ class Menu:
     def __init__(self, game: Game, button_distance: int):
         self.buttons = [
             func._engine_type_(
-                **getattr(self, name)._engine_args_,
+                **getattr(self, name)._engine_kwargs_,
+                func=func,
                 game=game,
                 x=0,
                 y=i * button_distance
