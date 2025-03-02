@@ -53,7 +53,7 @@ class Sprite:
         x=None,
         y=None,
         collidable=True,
-        teleport=[],
+        teleport=dict(),
     ):
         self.game = game
         self.teleport = teleport
@@ -85,7 +85,9 @@ class Sprite:
         self.rect.x = int(self.pos.x)
 
     def x_move(self, value):
-        self.x += value * self.game.dt
+        for _ in range(abs(int(value))):
+            self.x += abs(value) / value
+        self.x += value - int(value)
 
     @property
     def y(self):
@@ -97,7 +99,9 @@ class Sprite:
         self.rect.y = int(self.pos.y)
 
     def y_move(self, value):
-        self.y += value * self.game.dt
+        for _ in range(abs(int(value))):
+            self.y += abs(value) / value
+        self.x += value - int(value)
 
     def collides_with(self, other):
         if not self.collidable:
@@ -123,14 +127,23 @@ class Sprite:
         )
 
     def check_teleport(self):
-        if "top" in self.teleport and self.y < 0:
-            self.y = self.game.height
-        if "bottom" in self.teleport and self.y > self.game.height:
-            self.y = 0
-        if "left" in self.teleport and self.x < 0:
-            self.x = self.game.width
-        if "right" in self.teleport and self.x > self.game.width:
-            self.x = 0
+        for direction, teleports in self.teleport.items():
+            if direction == "+x":
+                for a, b in teleports.items():
+                    if self.x >= a:
+                        self.x = b
+            if direction == "-x":
+                for a, b in teleports.items():
+                    if self.x <= a:
+                        self.x = b
+            if direction == "+y":
+                for a, b in teleports.items():
+                    if self.y >= a:
+                        self.y = b
+            if direction == "-y":
+                for a, b in teleports.items():
+                    if self.y <= a:
+                        self.y = b
 
     def draw(self):
         self.game.screen.blit(self.image, (self.x, self.y))
@@ -186,7 +199,6 @@ class Button(Sprite):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             if pygame.MOUSEBUTTONDOWN:
                 self.func()
-
 
 
 def button(image_path: str):
