@@ -406,13 +406,13 @@ class TestLevel(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data="0,0\n100,100")
     def test_load(self, mock_file):
         image_filepath = "images/level//{}.png"
-        level = Level.load(self.game, "level.txt", image_filepath)
+        level = Level.load(self.game, "level.csv", image_filepath)
         self.assertEqual(len(level.sprites), 2)
         self.assertEqual(level.sprites[0].x, 400)
-        self.assertEqual(level.sprites[0].y, 300)
+        self.assertEqual(level.sprites[0].y, 0)
         self.assertEqual(level.sprites[1].x, 500)
-        self.assertEqual(level.sprites[1].y, 400)
-        mock_file.assert_called_once_with("level.txt")
+        self.assertEqual(level.sprites[1].y, 100)
+        mock_file.assert_called_once_with("level.csv")
 
     def test_loop(self):
         with patch.object(self.level, "y_move") as mock_y_move, patch.object(
