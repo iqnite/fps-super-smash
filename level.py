@@ -17,7 +17,7 @@ class Level(MultiSprite):
                         "image_path": image_filepath.format(i),
                         "pos_vector": pygame.Vector2(
                             ctx.screen.get_width() / 2 + int(line.split(",")[0]),
-                            ctx.screen.get_height() / 2 + int(line.split(",")[1]),
+                            int(line.split(",")[1]),
                         ),
                     }
                     | common_sprite_args
