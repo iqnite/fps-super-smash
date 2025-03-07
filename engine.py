@@ -33,15 +33,21 @@ class Game:
     def add_object(self, name, func, *args, **kwargs):
         self.objects[name] = func(self, *args, **kwargs)
 
+    def remove_object(self, obj):
+        for name, value in self.objects.items():
+            if value is obj:
+                del self.objects[name]
+                break
+
 
 class Sprite:
     def __init__(
         self,
         game: Game,
         image_path: str,
-        pos_vector=None,
         x=None,
         y=None,
+        pos_vector=None,
         collidable=True,
         teleport=dict(),
     ):

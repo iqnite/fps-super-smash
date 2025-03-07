@@ -26,6 +26,12 @@ class TestGame(unittest.TestCase):
         self.assertIn("dummy", self.game.objects)
         self.assertEqual(self.game.objects["dummy"], 1)
 
+    def test_remove_object(self):
+        dummy_sprite = Sprite(self.game, "images/level/0.png", 0, 0)
+        self.game.objects["dummy"] = dummy_sprite
+        self.game.remove_object(dummy_sprite)
+        self.assertNotIn("dummy", self.game.objects)
+
     @patch("pygame.event.get")
     @patch("pygame.display.flip")
     def test_main(self, mock_flip, mock_event_get):
