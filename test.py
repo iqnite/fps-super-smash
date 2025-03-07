@@ -4,6 +4,7 @@ import pygame
 from engine import Game, Sprite, MultiSprite
 from level import Level
 from player import Player
+import attacks
 
 
 class TestGame(unittest.TestCase):
@@ -369,6 +370,32 @@ class TestLevel(unittest.TestCase):
             mock_y_move.assert_called_once_with(0)
             mock_check_teleport.assert_called_once()
             mock_draw.assert_called_once()
+
+
+class TestMeleeAttack(unittest.TestCase):
+    def setUp(self):
+        self.game = Game((800, 600))
+        self.attack = attacks.MeleeAttack(self.game, x_velocity=10, y_velocity=10, image_path="images/level/0.png", x=0, y=0)
+    
+    def test_init(self):
+        self.assertEqual(self.attack.x_velocity, 10)
+
+    def test_loop(self):
+        with patch.object(self.attack, "x_move") as mock_x_move, patch.object(
+            self.attack, "y_move"
+        ) as mock_y_move, patch.object(
+            self.attack, "collides_with_any", return_value=True
+        ) as mock_collides_with_any, patch.object(
+            self.game, "remove_object"
+        ) as mock_remove_object, patch.object(
+            Sprite, "loop"
+        ) as mock_super_loop:
+            self.attack.loop()
+            mock_x_move.assert_called_once_with(10)
+            mock_y_move.assert_called_once_with(10)
+            mock_collides_with_any.assert_called_once()
+            mock_remove_object.assert_called_once_with(self.attack)
+            mock_super_loop.assert_called_once()
 
 
 if __name__ == "__main__":
