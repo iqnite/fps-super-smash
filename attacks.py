@@ -1,7 +1,7 @@
 from engine import Game, Sprite
 
 
-class MeleeAttack(Sprite):
+class ShootAttack(Sprite):
     def __init__(self, game: Game, x_velocity=0, y_velocity=0, **kwargs):
         super().__init__(game, **kwargs)
         self.x_velocity = x_velocity
@@ -10,6 +10,6 @@ class MeleeAttack(Sprite):
     def loop(self):
         self.x_move(self.x_velocity)
         self.y_move(self.y_velocity)
-        if self.collides_with_any():
+        if self.colliding():
             self.game.remove_object(self)
         super().loop()

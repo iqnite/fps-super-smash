@@ -80,13 +80,13 @@ class TestSprite(unittest.TestCase):
         other_sprite.y = 100
         self.assertTrue(self.sprite.collides_with(other_sprite))
 
-    def test_collides_with_any(self):
+    def test_colliding(self):
         other_sprite = Sprite(self.game, "images/level/0.png", x=1000000, y=1000000)
         self.game.add_object("other", lambda game: other_sprite)
-        self.assertFalse(self.sprite.collides_with_any())
+        self.assertFalse(self.sprite.colliding())
         other_sprite.x = 100
         other_sprite.y = 100
-        self.assertTrue(self.sprite.collides_with_any())
+        self.assertTrue(self.sprite.colliding())
 
     def test_check_teleport_positive_x(self):
         self.sprite.teleport = {"+x": {200: 0}}
@@ -117,7 +117,7 @@ class TestSprite(unittest.TestCase):
         # No assertion, just ensure no exceptions
 
     def test_flip_image(self):
-        self.sprite.image = self.sprite.flipped_image
+        self.sprite.direction = -1
         self.sprite.draw()
         self.assertEqual(self.sprite.image, self.sprite.flipped_image)
 
@@ -159,13 +159,13 @@ class TestMultiSprite(unittest.TestCase):
         other_sprite.y = 100
         self.assertTrue(self.multi_sprite.collides_with(other_sprite))
 
-    def test_collides_with_any(self):
+    def test_colliding(self):
         other_sprite = Sprite(self.game, "images/level/0.png", x=1000000, y=1000000)
         self.game.add_object("other", lambda game: other_sprite)
-        self.assertFalse(self.multi_sprite.collides_with_any())
+        self.assertFalse(self.multi_sprite.colliding())
         other_sprite.x = 100
         other_sprite.y = 100
-        self.assertTrue(self.multi_sprite.collides_with_any())
+        self.assertTrue(self.multi_sprite.colliding())
 
     def test_check_teleport(self):
         self.multi_sprite.sprites[0].teleport = {
@@ -205,7 +205,7 @@ class TestMultiSprite(unittest.TestCase):
 
     def test_flip_image(self):
         for sprite in self.multi_sprite.sprites:
-            sprite.image = sprite.flipped_image
+            sprite.direction = -1
         self.multi_sprite.draw()
         for sprite in self.multi_sprite.sprites:
             self.assertEqual(sprite.image, sprite.flipped_image)
@@ -219,6 +219,7 @@ class TestPlayer(unittest.TestCase):
             "left": pygame.K_LEFT,
             "right": pygame.K_RIGHT,
             "jump": pygame.K_SPACE,
+            "shoot": pygame.K_m,
         }
         self.player = Player(
             game=self.game,
@@ -248,6 +249,7 @@ class TestPlayer(unittest.TestCase):
             self.controls["left"]: True,
             self.controls["right"]: False,
             self.controls["jump"]: False,
+            self.controls["shoot"]: False,
         }
         self.player.read_controls()
         self.assertEqual(self.player.x_velocity, -0.5)
@@ -256,6 +258,7 @@ class TestPlayer(unittest.TestCase):
             self.controls["left"]: False,
             self.controls["right"]: True,
             self.controls["jump"]: False,
+            self.controls["shoot"]: False,
         }
         self.player.read_controls()
         self.assertEqual(self.player.x_velocity, 0.0)  # -0.5 + 0.5
@@ -264,8 +267,9 @@ class TestPlayer(unittest.TestCase):
             self.controls["left"]: False,
             self.controls["right"]: False,
             self.controls["jump"]: True,
+            self.controls["shoot"]: False,
         }
-        with patch.object(self.player, "collides_with_any", return_value=True):
+        with patch.object(self.player, "colliding", return_value=True):
             self.player.read_controls()
             self.assertEqual(self.player.y_velocity, -10)
 
@@ -308,7 +312,7 @@ class TestPlayer(unittest.TestCase):
 
     def test_y_move_no_collision(self):
         self.player.y_velocity = 5
-        with patch.object(self.player, "collides_with_any", return_value=False):
+        with patch.object(self.player, "colliding", return_value=False):
             self.player.simulate()
             self.assertEqual(self.player.y_velocity, 5.5)
 
@@ -319,6 +323,7 @@ class TestPlayer(unittest.TestCase):
                 self.controls["left"]: False,
                 self.controls["right"]: False,
                 self.controls["jump"]: True,
+                self.controls["shoot"]: False,
             },
         ):
             self.player.read_controls()
@@ -331,9 +336,10 @@ class TestPlayer(unittest.TestCase):
                 self.controls["left"]: False,
                 self.controls["right"]: False,
                 self.controls["jump"]: True,
+                self.controls["shoot"]: False,
             },
         ):
-            with patch.object(self.player, "collides_with_any", return_value=True):
+            with patch.object(self.player, "colliding", return_value=True):
                 self.player.read_controls()
                 self.assertEqual(self.player.y_velocity, -10)
 
@@ -372,11 +378,18 @@ class TestLevel(unittest.TestCase):
             mock_draw.assert_called_once()
 
 
-class TestMeleeAttack(unittest.TestCase):
+class TestShootAttack(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
-        self.attack = attacks.MeleeAttack(self.game, x_velocity=10, y_velocity=10, image_path="images/level/0.png", x=0, y=0)
-    
+        self.attack = attacks.ShootAttack(
+            self.game,
+            x_velocity=10,
+            y_velocity=10,
+            image_path="images/level/0.png",
+            x=0,
+            y=0,
+        )
+
     def test_init(self):
         self.assertEqual(self.attack.x_velocity, 10)
 
@@ -384,8 +397,8 @@ class TestMeleeAttack(unittest.TestCase):
         with patch.object(self.attack, "x_move") as mock_x_move, patch.object(
             self.attack, "y_move"
         ) as mock_y_move, patch.object(
-            self.attack, "collides_with_any", return_value=True
-        ) as mock_collides_with_any, patch.object(
+            self.attack, "colliding", return_value=True
+        ) as mock_colliding, patch.object(
             self.game, "remove_object"
         ) as mock_remove_object, patch.object(
             Sprite, "loop"
@@ -393,7 +406,7 @@ class TestMeleeAttack(unittest.TestCase):
             self.attack.loop()
             mock_x_move.assert_called_once_with(10)
             mock_y_move.assert_called_once_with(10)
-            mock_collides_with_any.assert_called_once()
+            mock_colliding.assert_called_once()
             mock_remove_object.assert_called_once_with(self.attack)
             mock_super_loop.assert_called_once()
 

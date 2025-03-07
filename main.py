@@ -17,7 +17,12 @@ game.add_object(
     image_path="images/player0.png",
     x=game.screen.get_width() / 2,
     y=game.screen.get_height() / 2,
-    controls={"left": pygame.K_a, "right": pygame.K_d, "jump": pygame.K_w},
+    controls={
+        "left": pygame.K_a,
+        "right": pygame.K_d,
+        "jump": pygame.K_w,
+        "shoot": pygame.K_s,
+    },
     **PLAYER_DEFAULTS,
 )
 game.add_object(
@@ -26,7 +31,12 @@ game.add_object(
     image_path="images/player1.png",
     x=100 + game.screen.get_width() / 2,
     y=game.screen.get_height() / 2,
-    controls={"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "jump": pygame.K_UP},
+    controls={
+        "left": pygame.K_LEFT,
+        "right": pygame.K_RIGHT,
+        "jump": pygame.K_UP,
+        "shoot": pygame.K_DOWN,
+    },
     **PLAYER_DEFAULTS,
 )
 game.add_object(
