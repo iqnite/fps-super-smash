@@ -111,11 +111,12 @@ class Sprite:
         if isinstance(other, Sprite):
             return self.rect.colliderect(other.rect)
 
-    def collides_with_any(self):
+    def collides_with_any(self, otherType=None):
         return any(
             self.collides_with(obj.sprites if isinstance(obj, MultiSprite) else obj)
             for obj in self.game.objects.values()
-            if obj is not self
+            if (obj is not self)
+            and (otherType is None or isinstance(obj, otherType))
             and (
                 not isinstance(obj, MultiSprite)
                 or not any(sprite is self for sprite in obj.sprites)
