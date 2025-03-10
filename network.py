@@ -1,8 +1,11 @@
 import socket
 import selectors
 import json
+
+import pygame
 import engine
 from level import Level
+from player import Player
 
 HOST = "127.0.0.1"
 PORT = 65432
@@ -16,20 +19,28 @@ class NetworkGame(engine.Game):
     def __init__(self, screen_size):
         super().__init__(screen_size)
 
+    def add_object(self, name, func, *args, **kwargs):
+        obj = super().add_object(name, func, *args, **kwargs)
+        obj._network_sync_ = kwargs.get("network_sync", True)
+        return obj
+
     def serialize(self):
         serialized = []
         for name, obj in self.objects.items():
-            if isinstance(obj, engine.Sprite):
+            if isinstance(obj, engine.Sprite) and hasattr(obj, "_network_sync_"):
                 serialized_obj = {"name": name} | {
                     attr: getattr(obj, attr)
                     for attr in ("image_path", "x", "y", "direction", "collidable")
                 }
-            elif isinstance(obj, engine.MultiSprite):
-                serialized_obj = {"name": name} | {
-                    attr: getattr(sprite, attr)
-                    for sprite in obj.sprites
-                    for attr in ("image_path", "x", "y", "direction", "collidable")
-                }
+            elif isinstance(obj, engine.MultiSprite) and hasattr(obj, "_network_sync_"):
+                serialized_obj = [
+                    {"name": name + str(i)}
+                    | {
+                        attr: getattr(sprite, attr)
+                        for attr in ("image_path", "x", "y", "direction", "collidable")
+                    }
+                    for i, sprite in enumerate(obj.sprites)
+                ]
             else:
                 continue
             serialized.append(serialized_obj)
@@ -40,6 +51,8 @@ class NetworkGame(engine.Game):
         for obj in loaded_data:
             self.add_object(func=engine.Sprite, **obj)
         for name in list(self.objects).copy():
+            if not hasattr(self.objects[name], "_network_sync_"):
+                continue
             for loaded_obj in loaded_data:
                 if loaded_obj["name"] == name:
                     break
@@ -117,6 +130,7 @@ class Server:
             y_velocity=1,
             common_sprite_args={"teleport": {"+y": {720: 200}}},
         )
+        self.game.main()
 
 
 class Client:
@@ -134,7 +148,27 @@ class Client:
         return data
 
     def update(self):
+        self.game.screen.fill("black")
         self.game.deserialize(self.request(GET_GAME))
 
     def main(self):
         self.game.main(self.update)
+
+    def create_player(self):
+        self.game.add_object(
+            "player",
+            Player,
+            image_path="images/player1.png",
+            x=self.game.width / 2 + 100,
+            y=200,
+            controls={
+                "left": pygame.K_LEFT,
+                "right": pygame.K_RIGHT,
+                "jump": pygame.K_UP,
+                "shoot": pygame.K_DOWN,
+            },
+            move_acceleration=4,
+            friction=0.25,
+            jump_acceleration=24,
+            gravity=2,
+        )
