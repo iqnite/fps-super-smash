@@ -93,7 +93,7 @@ class Player(Sprite):
         self.life -= attack.damage
         if self.life <= 0:
             print("despawn")
-            #Simon pack hier deathscreen rein bidde
+            # Simon pack hier deathscreen rein bidde
         self.x_velocity += attack.x_velocity / 2
 
     def check_life(self):
@@ -103,4 +103,4 @@ class Player(Sprite):
     def check_fall(self):
         if self.y >= self.game.height:
             self.life = 0
-            print("fall")          
+            print("fall")
