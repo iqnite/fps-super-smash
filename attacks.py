@@ -14,7 +14,7 @@ class ShootAttack(Attack):
         self.x_move(self.x_velocity)
         self.y_move(self.y_velocity)
         if self.colliding():
-            for obj in self.game.objects:
+            for obj in self.game.objects.values():
                 if self.collides_with(obj) and hasattr(obj, "on_hit"):
                     obj.on_hit(self)
             self.game.remove_object(self)

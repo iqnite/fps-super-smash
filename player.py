@@ -88,6 +88,5 @@ class Player(Sprite):
             bullet.x_move(bullet.direction)
 
     def on_hit(self, attack: attacks.Attack):
-
         self.life -= attack.damage
         self.x_velocity += attack.x_velocity / 2
