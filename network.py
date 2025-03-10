@@ -13,6 +13,7 @@ PORT = 65432
 
 ECHO = b"echo"
 GET_GAME = b"get_game"
+UPDATE_GAME = b"update_game:"
 
 
 class NetworkGame(engine.Game):
@@ -22,6 +23,7 @@ class NetworkGame(engine.Game):
     def add_object(self, name, func, *args, **kwargs):
         obj = super().add_object(name, func, *args, **kwargs)
         obj._network_sync_ = kwargs.get("network_sync", True)
+        obj._network_new_ = True
         return obj
 
     def serialize(self):
@@ -57,7 +59,10 @@ class NetworkGame(engine.Game):
                 if loaded_obj["name"] == name:
                     break
             else:
-                del self.objects[name]
+                if self.objects[name]._network_new_:
+                    self.objects[name]._network_new_ = False
+                else:
+                    del self.objects[name]
 
 
 class Server:
@@ -72,7 +77,7 @@ class Server:
     def __enter__(self):
         self.start_server()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop_server()
 
@@ -115,11 +120,16 @@ class Server:
         sock: socket.socket = key.fileobj
         data = key.data
         if mask & selectors.EVENT_READ:
-            recv_data = sock.recv(1024)  # Should be ready to read
+            try:
+                recv_data = sock.recv(1024)  # Should be ready to read
+            except ConnectionResetError:
+                recv_data = b""
             if recv_data == ECHO:
                 data.outb += recv_data
             elif recv_data == GET_GAME:
                 data.outb += self.game.serialize().encode()
+            elif recv_data.startswith(UPDATE_GAME):
+                self.game.deserialize(recv_data[len(UPDATE_GAME) :])
             elif not recv_data:
                 self.clients.remove(sock)
                 self.selector.unregister(sock)
@@ -154,13 +164,12 @@ class Client:
     def __enter__(self):
         self.connect()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
 
     def connect(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.client.bind((socket.gethostbyname(socket.gethostname()), 65431))
         self.client.connect((self.server_host, self.server_port))
 
     def disconnect(self):
@@ -170,10 +179,11 @@ class Client:
         self.client.sendall(data.encode() if isinstance(data, str) else data)
         data = self.client.recv(1024)
         return data
-    
+
     def update(self):
         self.game.screen.fill("black")
         self.game.deserialize(self.request(GET_GAME))
+        self.request(UPDATE_GAME + self.game.serialize().encode())
 
     def main(self):
         self.game.main(self.update)
@@ -196,3 +206,4 @@ class Client:
             jump_acceleration=24,
             gravity=2,
         )
+        self.request(UPDATE_GAME + self.game.serialize().encode())
