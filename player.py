@@ -23,6 +23,7 @@ class Player(Sprite):
         self.x_velocity = 0
         self.y_velocity = -1
         self._backwards = 1
+        self._shots = 0
 
     def loop(self):
         self.read_controls()
@@ -63,7 +64,14 @@ class Player(Sprite):
                 self.y_velocity = -self.jump_acceleration
             self.y_move(-10)
         if keys[self.controls.get("shoot", 0)]:
-            bullet = self.game.add_object(
+            if self._shots < 1:
+                self._shots += 1
+                self.shoot()
+        else:
+            self._shots = 0
+
+    def shoot(self):
+        bullet = self.game.add_object(
                 "shoot_attack",
                 attacks.ShootAttack,
                 x_velocity=10 * self.direction,
@@ -74,5 +82,5 @@ class Player(Sprite):
                 direction=self.direction,
                 collidable=False,
             )
-            while self.collides_with(bullet):
-                bullet.x_move(bullet.direction)
+        while self.collides_with(bullet):
+            bullet.x_move(bullet.direction)
