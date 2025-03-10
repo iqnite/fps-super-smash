@@ -19,8 +19,8 @@ class Game:
                     self.running = False
             if func:
                 func()
-            for obj in self.objects.values():
-                if obj.loop:
+            for obj in list(self.objects.values()).copy():
+                if obj and obj.loop:
                     obj.loop()
             # flip() the display to put your work on screen
             pygame.display.flip()
@@ -31,7 +31,23 @@ class Game:
         pygame.quit()
 
     def add_object(self, name, func, *args, **kwargs):
-        self.objects[name] = func(self, *args, **kwargs)
+        obj = func(self, *args, **kwargs)
+        self.objects[name] = obj
+        return obj
+
+    def remove_object(self, obj):
+        for name, value in self.objects.items():
+            if value is obj:
+                del self.objects[name]
+                break
+
+    @property
+    def width(self):
+        return self.screen.get_width()
+
+    @property
+    def height(self):
+        return self.screen.get_height()
 
 
 class Sprite:
@@ -39,14 +55,17 @@ class Sprite:
         self,
         game: Game,
         image_path: str,
-        pos_vector=None,
         x=None,
         y=None,
+        pos_vector=None,
+        direction=1,
         collidable=True,
         teleport=dict(),
     ):
         self.game = game
         self.teleport = teleport
+        self.direction = direction
+        self.collidable = collidable
         self.default_image = pygame.image.load(image_path)
         self.flipped_image = pygame.transform.flip(self.default_image, True, False)
         self.image = self.default_image
@@ -55,8 +74,7 @@ class Sprite:
         elif x is not None and y is not None:
             self.pos = pygame.Vector2(x, y)
         else:
-            raise ValueError("Either pos_vector or x and y must be provided")
-        self.collidable = collidable
+            self.pos = pygame.Vector2(0, 0)
         self.rect = self.image.get_rect()
         self.rect.x = int(self.pos.x)
         self.rect.y = int(self.pos.y)
@@ -91,11 +109,9 @@ class Sprite:
     def y_move(self, value):
         for _ in range(abs(int(value))):
             self.y += abs(value) / value
-        self.x += value - int(value)
+        self.y += value - int(value)
 
     def collides_with(self, other):
-        if not self.collidable:
-            return False
         if isinstance(other, str):
             return self.collides_with(self.game.objects[other])
         if isinstance(other, MultiSprite):
@@ -105,16 +121,28 @@ class Sprite:
         if isinstance(other, Sprite):
             return self.rect.colliderect(other.rect)
 
-    def collides_with_any(self):
-        return any(
-            self.collides_with(obj.sprites if isinstance(obj, MultiSprite) else obj)
+    def colliding(self, otherType=None):
+        return [
+            obj
             for obj in self.game.objects.values()
-            if obj is not self
-            and (
-                not isinstance(obj, MultiSprite)
-                or not any(sprite is self for sprite in obj.sprites)
+            if (
+                isinstance(obj, otherType or object)
+                and (
+                    isinstance(obj, MultiSprite)
+                    and any(
+                        self.collides_with(obj)
+                        for obj in obj.sprites
+                        if obj is not self and obj.collidable
+                    )
+                )
+                or (
+                    isinstance(obj, Sprite)
+                    and obj is not self
+                    and obj.collidable
+                    and self.collides_with(obj)
+                )
             )
-        )
+        ]
 
     def check_teleport(self):
         for direction, teleports in self.teleport.items():
@@ -136,6 +164,7 @@ class Sprite:
                         self.y = b
 
     def draw(self):
+        self.image = self.default_image if self.direction == 1 else self.flipped_image
         self.game.screen.blit(self.image, (self.x, self.y))
 
 
@@ -167,8 +196,12 @@ class MultiSprite:
     def collides_with(self, other):
         return any(sprite.collides_with(other) for sprite in self.sprites)
 
-    def collides_with_any(self):
-        return any(sprite.collides_with_any() for sprite in self.sprites)
+    def colliding(self, otherType=None):
+        return [
+            collision
+            for sprite in self.sprites
+            for collision in sprite.colliding(otherType)
+        ]
 
     def check_teleport(self):
         for sprite in self.sprites:
@@ -177,3 +210,43 @@ class MultiSprite:
     def draw(self):
         for sprite in self.sprites:
             sprite.draw()
+
+
+class Button(Sprite):
+    def __init__(self, game: Game, image_path: str, x, y, func):
+        super().__init__(game, image_path, x=x, y=y, collidable=False)
+        self.func = func
+
+    def loop(self):
+        super().loop()
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.MOUSEBUTTONDOWN:
+                self.func()
+
+
+def button(image_path: str):
+    def decorator(func):
+        func._engine_type_ = Button
+        func._engine_kwargs_ = {"image_path": image_path}
+        return func
+
+    return decorator
+
+
+class Menu:
+    def __init__(self, game: Game, button_distance: int):
+        self.buttons = [
+            func._engine_type_(
+                **getattr(self, name)._engine_kwargs_,
+                func=func,
+                game=game,
+                x=game.width / 2,
+                y=game.height / 2 + i * button_distance
+            )
+            for i, (name, func) in enumerate(self.__class__.__dict__.items())
+            if hasattr(func, "_engine_type_")
+        ]
+
+    def loop(self):
+        for button in self.buttons:
+            button.loop()

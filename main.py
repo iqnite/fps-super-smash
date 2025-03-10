@@ -15,18 +15,28 @@ game.add_object(
     "player0",
     Player,
     image_path="images/player0.png",
-    x=game.screen.get_width() / 2,
-    y=game.screen.get_height() / 2,
-    controls={"left": pygame.K_a, "right": pygame.K_d, "jump": pygame.K_w},
+    x=game.width / 2 - 100,
+    y=200,
+    controls={
+        "left": pygame.K_a,
+        "right": pygame.K_d,
+        "jump": pygame.K_w,
+        "shoot": pygame.K_s,
+    },
     **PLAYER_DEFAULTS,
 )
 game.add_object(
     "player1",
     Player,
     image_path="images/player1.png",
-    x=100 + game.screen.get_width() / 2,
-    y=game.screen.get_height() / 2,
-    controls={"left": pygame.K_LEFT, "right": pygame.K_RIGHT, "jump": pygame.K_UP},
+    x=game.width / 2 + 100,
+    y=200,
+    controls={
+        "left": pygame.K_LEFT,
+        "right": pygame.K_RIGHT,
+        "jump": pygame.K_UP,
+        "shoot": pygame.K_DOWN,
+    },
     **PLAYER_DEFAULTS,
 )
 game.add_object(
@@ -35,7 +45,7 @@ game.add_object(
     pos_filepath="level.csv",
     image_filepath="images/level/{}.png",
     y_velocity=1,
-    common_sprite_args={"teleport": {"+y": {game.screen.get_height(): 200}}},
+    common_sprite_args={"teleport": {"+y": {720: 200}}},
 )
 
 game.main(
