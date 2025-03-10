@@ -43,7 +43,7 @@ game.add_object(
     "level",
     Level.load,
     pos_filepath="level.csv",
-    image_filepath="images/level//{}.png",
+    image_filepath="images/level/{}.png",
     y_velocity=1,
     common_sprite_args={"teleport": {"+y": {720: 200}}},
 )
