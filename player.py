@@ -30,6 +30,8 @@ class Player(Sprite):
     def loop(self):
         self.read_controls()
         self.simulate()
+        self.check_fall()
+        self.check_life()
         super().loop()
 
     def simulate(self):
@@ -89,4 +91,16 @@ class Player(Sprite):
 
     def on_hit(self, attack: attacks.Attack):
         self.life -= attack.damage
+        if self.life <= 0:
+            print("despawn")
+            #Simon pack hier deathscreen rein bidde
         self.x_velocity += attack.x_velocity / 2
+
+    def check_life(self):
+        if self.life <= 0:
+            self.game.remove_object(self)
+
+    def check_fall(self):
+        if self.y >= self.game.height:
+            self.life = 0
+            print("fall")          
