@@ -1,3 +1,4 @@
+from time import sleep
 import unittest
 from unittest.mock import mock_open, patch
 import pygame
@@ -394,6 +395,39 @@ class TestPlayer(unittest.TestCase):
             with patch.object(self.player, "colliding", return_value=True):
                 self.player.read_controls()
                 self.assertEqual(self.player.y_velocity, -10)
+
+    def test_shoot(self):
+        with patch(
+            "pygame.key.get_pressed",
+            return_value={
+                self.controls["left"]: False,
+                self.controls["right"]: False,
+                self.controls["jump"]: False,
+                self.controls["shoot"]: True,
+            },
+        ):
+            self.player.read_controls()
+            self.player.read_controls()
+            attack_count = 0
+            for obj in self.game.objects.values():
+                if isinstance(obj, attacks.ShootAttack):
+                    attack_count += 1
+            self.assertEqual(attack_count, 1)
+
+    def test_check_fall(self):
+        self.player.y = 10000000
+        self.player.check_fall()
+        self.assertEqual(self.player.health, 0)
+
+    def test_check_health(self):
+        self.game.objects["player"] = self.player
+        self.player.health = 0
+        self.player.check_health()
+        self.assertNotIn("player", self.game.objects)
+
+    def test_on_hit(self):
+        self.player.on_hit(attacks.Attack(self.game, image_path="images/level/0.png"))
+        self.assertEqual(self.player.health, 95)
 
 
 class TestLevel(unittest.TestCase):
