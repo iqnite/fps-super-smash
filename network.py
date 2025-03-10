@@ -1,13 +1,13 @@
 import socket
 import selectors
 import json
+from types import SimpleNamespace
 
 import pygame
 import engine
 from level import Level
 from player import Player
 
-HOST = "127.0.0.1"
 PORT = 65432
 
 
@@ -69,10 +69,17 @@ class Server:
         self.selector = selectors.DefaultSelector()
         self.game: NetworkGame = NetworkGame((0, 0))
 
+    def __enter__(self):
+        self.start_server()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop_server()
+
     def start_server(self):
         self.online = True
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((HOST, PORT))
+        self.server.bind((socket.gethostbyname(socket.gethostname()), PORT))
         self.server.listen()
         self.server.setblocking(False)
         self.selector.register(self.server, selectors.EVENT_READ)
@@ -97,10 +104,12 @@ class Server:
             self.selector.close()
 
     def accept_wrapper(self, sock):
-        connection, _ = sock.accept()
+        connection, address = sock.accept()
+        print("Accepted connection from", address)
         connection.setblocking(False)
+        data = SimpleNamespace(addr=address, inb=b"", outb=b"")
         self.clients.append(connection)
-        self.selector.register(connection, selectors.EVENT_READ)
+        self.selector.register(connection, selectors.EVENT_READ, data=data)
 
     def service_connection(self, key, mask):
         sock: socket.socket = key.fileobj
@@ -112,8 +121,10 @@ class Server:
             elif recv_data == GET_GAME:
                 data.outb += self.game.serialize().encode()
             elif not recv_data:
+                self.clients.remove(sock)
                 self.selector.unregister(sock)
                 sock.close()
+                print("Closed connection to", data.addr)
             else:
                 data.outb += b"Unknown command"
         if mask & selectors.EVENT_WRITE:
@@ -140,13 +151,26 @@ class Client:
         self.client: socket.socket
         self.game: NetworkGame = NetworkGame((0, 0))
 
-    def request(self, data: str | bytes):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.client:
-            self.client.connect((self.server_host, self.server_port))
-            self.client.sendall(data.encode() if isinstance(data, str) else data)
-            data = self.client.recv(1024)
-        return data
+    def __enter__(self):
+        self.connect()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
 
+    def connect(self):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.client.bind((socket.gethostbyname(socket.gethostname()), 65431))
+        self.client.connect((self.server_host, self.server_port))
+
+    def disconnect(self):
+        self.client.close()
+
+    def request(self, data: str | bytes):
+        self.client.sendall(data.encode() if isinstance(data, str) else data)
+        data = self.client.recv(1024)
+        return data
+    
     def update(self):
         self.game.screen.fill("black")
         self.game.deserialize(self.request(GET_GAME))
