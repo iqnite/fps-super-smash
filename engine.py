@@ -63,6 +63,7 @@ class Sprite:
         teleport=dict(),
     ):
         self.game = game
+        self.image_path = image_path
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable

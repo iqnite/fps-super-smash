@@ -4,6 +4,7 @@ from unittest.mock import mock_open, patch
 import pygame
 from engine import Button, Game, Menu, Sprite, MultiSprite, button
 from level import Level
+from network import NetworkGame
 from player import Player
 import attacks
 
@@ -506,6 +507,28 @@ class TestShootAttack(unittest.TestCase):
         self.attack.x = 1000000
         self.attack.loop()
         self.assertNotIn("shoot_attack", self.game.objects)
+
+
+class TestNetworkGame(unittest.TestCase):
+    def setUp(self):
+        self.game = NetworkGame((800, 600))
+        self.game.add_object("sprite1", Sprite, "images/level/0.png", x=100, y=100)
+        self.game.add_object("sprite2", Sprite, "images/level/0.png", x=250, y=200)
+        self.game.add_object("sprite3", Sprite, "images/level/0.png", x=350, y=300)
+
+    def test_serialize(self):
+        serialized = self.game.serialize()
+        self.assertEqual(
+            serialized,
+            '[{"name": "sprite1", "image_path": "images/level/0.png", "x": 100.0, "y": 100.0, "direction": 1, "collidable": true}, {"name": "sprite2", "image_path": "images/level/0.png", "x": 250.0, "y": 200.0, "direction": 1, "collidable": true}, {"name": "sprite3", "image_path": "images/level/0.png", "x": 350.0, "y": 300.0, "direction": 1, "collidable": true}]',
+        )
+
+    def test_deserialize(self):
+        serialized = '[{"name": "sprite1", "image_path": "images/level/0.png", "x": 100, "y": 100, "direction": 1, "collidable": true}]'
+        self.game.deserialize(serialized)
+        self.assertIn("sprite1", self.game.objects)
+        self.assertNotIn("sprite2", self.game.objects)
+        self.assertNotIn("sprite3", self.game.objects)
 
 
 if __name__ == "__main__":
