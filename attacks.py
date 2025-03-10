@@ -18,4 +18,6 @@ class ShootAttack(Attack):
                 if self.collides_with(obj) and hasattr(obj, "on_hit"):
                     obj.on_hit(self)
             self.game.remove_object(self)
+        if not int(self.x) in range(0,self.game.screen.get_width()):
+            self.game.remove_object(self)
         super().loop()

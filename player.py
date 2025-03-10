@@ -1,3 +1,4 @@
+from datetime import datetime
 import pygame
 import attacks
 from engine import Game, Sprite
@@ -23,6 +24,7 @@ class Player(Sprite):
         self.x_velocity = 0
         self.y_velocity = -1
         self._backwards = 1
+        self.life = 100
 
     def loop(self):
         self.read_controls()
@@ -64,7 +66,7 @@ class Player(Sprite):
             self.y_move(-10)
         if keys[self.controls.get("shoot", 0)]:
             bullet = self.game.add_object(
-                "shoot_attack",
+                f"shoot_attack{datetime.now()}",
                 attacks.ShootAttack,
                 x_velocity=10 * self.direction,
                 y_velocity=0,
@@ -76,3 +78,8 @@ class Player(Sprite):
             )
             while self.collides_with(bullet):
                 bullet.x_move(bullet.direction)
+
+    def on_hit(self,attack:attacks.Attack):
+
+        self.life -= attack.damage
+        self.x_velocity += attack.x_velocity/2

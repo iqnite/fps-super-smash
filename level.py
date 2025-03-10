@@ -30,7 +30,7 @@ class Level(MultiSprite):
 
     def __init__(self, ctx, sprite_args=[], y_velocity=0):
         super().__init__(ctx, sprite_args)
-        self.y_velocity = y_velocity
+        self.y_velocity = 0#y_velocity
 
     def loop(self):
         self.y_move(self.y_velocity)
