@@ -1,5 +1,4 @@
 from engine import Game, Sprite
-from player import Player
 
 
 class Attack(Sprite):
@@ -16,7 +15,7 @@ class ShootAttack(Attack):
         self.y_move(self.y_velocity)
         if self.colliding():
             for obj in self.game.objects:
-                if self.collides_with(obj) and isinstance(obj, Player):
+                if self.collides_with(obj) and hasattr(obj, "on_hit"):
                     obj.on_hit(self)
             self.game.remove_object(self)
         super().loop()
