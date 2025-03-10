@@ -109,7 +109,7 @@ class Sprite:
     def y_move(self, value):
         for _ in range(abs(int(value))):
             self.y += abs(value) / value
-        self.x += value - int(value)
+        self.y += value - int(value)
 
     def collides_with(self, other):
         if isinstance(other, str):
