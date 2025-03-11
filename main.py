@@ -4,7 +4,16 @@ from level import Level
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "server":
+    if len(sys.argv) > 1:
+        client = network.Client(sys.argv[1], network.PORT)
+        try:
+            with client:
+                client.request(network.ECHO)
+                client.main()
+        except ConnectionRefusedError:
+            print("Could not connect: Server is not running.")
+            quit()
+    else:
         server = network.Server()
         server.game.add_object(
             "level",
@@ -16,12 +25,3 @@ if __name__ == "__main__":
         )
         with server:
             server.main()
-    else:
-        client = network.Client(network.get_wlan_ip(), network.PORT)  # TODO: Change to server IP
-        try:
-            with client:
-                print(client.request(network.ECHO))
-                client.main()
-        except ConnectionRefusedError:
-            print("Could not connect: Server is not running.")
-            quit()

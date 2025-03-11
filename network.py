@@ -66,7 +66,7 @@ class Server:
         self.game.main(self.event_loop)
 
     def event_loop(self):
-        events = self.selector.select()
+        events = self.selector.select(timeout=None)
         for key, mask in events:
             if key.data is None:
                 self.accept_wrapper(key.fileobj)
@@ -165,8 +165,8 @@ class Client:
         self.client.close()
 
     def request(self, data: str | bytes):
-        data = self.client.recv(1024)
         self.client.sendall(data.encode() if isinstance(data, str) else data)
+        data = self.client.recv(1024)
         return data
 
     def main(self):
