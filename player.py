@@ -1,5 +1,4 @@
 from datetime import datetime
-import pygame
 import attacks
 from engine import Game, Sprite
 
@@ -8,7 +7,6 @@ class Player(Sprite):
     def __init__(
         self,
         game: Game,
-        controls: dict,
         move_acceleration: float,
         friction: float,
         jump_acceleration: float,
@@ -16,7 +14,6 @@ class Player(Sprite):
         **kwargs,
     ):
         super().__init__(game, **kwargs)
-        self.controls = controls
         self.move_acceleration = move_acceleration
         self.friction = friction
         self.jump_acceleration = jump_acceleration
@@ -26,6 +23,7 @@ class Player(Sprite):
         self._backwards = 1
         self._shots = 0
         self.health = 100
+        self.controls = {}
 
     def loop(self):
         self.read_controls()
@@ -55,19 +53,18 @@ class Player(Sprite):
             self.y_velocity += self.gravity
 
     def read_controls(self):
-        keys = pygame.key.get_pressed()
-        if keys[self.controls.get("left", 0)]:
+        if self.controls.get("left", False):
             self.direction = -1
             self.x_velocity -= self.move_acceleration
-        if keys[self.controls.get("right", 0)]:
+        if self.controls.get("right", False):
             self.direction = 1
             self.x_velocity += self.move_acceleration
-        if keys[self.controls.get("jump", 0)]:
+        if self.controls.get("jump", False):
             self.y_move(10)
             if self.colliding():
                 self.y_velocity = -self.jump_acceleration
             self.y_move(-10)
-        if keys[self.controls.get("shoot", 0)]:
+        if self.controls.get("shoot", False):
             if self._shots < 1:
                 self._shots += 1
                 self.shoot()
