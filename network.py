@@ -45,7 +45,6 @@ class Server:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop_server()
-        self.selector.close()
 
     def start_server(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

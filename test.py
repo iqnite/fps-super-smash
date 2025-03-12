@@ -1,8 +1,11 @@
-from time import sleep
+import selectors
+from types import SimpleNamespace
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, Mock, mock_open, patch
 import pygame
+import socket
 from engine import Button, Game, Menu, Sprite, MultiSprite, button
+from network import ECHO, GET_FRAME, SEND_CONTROLS, Client, Server, get_wlan_ip
 from level import Level
 from player import Player
 import attacks
@@ -488,6 +491,367 @@ class TestShootAttack(unittest.TestCase):
         self.attack.x = 1000000
         self.attack.loop()
         self.assertNotIn("shoot_attack", self.game.objects)
+
+
+class TestServer(unittest.TestCase):
+
+    @patch("network.psutil.net_if_addrs")
+    def test_get_wlan_ip(self, mock_net_if_addrs):
+        # Test successful IP retrieval
+        mock_addr = Mock(family=socket.AF_INET, address="192.168.1.100")
+        mock_net_if_addrs.return_value = {"Wi-Fi": [mock_addr]}
+        self.assertEqual(get_wlan_ip(), "192.168.1.100")
+
+        # Test when no WiFi interfaces are found
+        mock_net_if_addrs.return_value = {"Ethernet": [mock_addr]}
+        self.assertIsNone(get_wlan_ip())
+
+        # Test when WiFi interface has no IPv4 address
+        non_ipv4_addr = Mock(family=socket.AF_INET6, address="::1")
+        mock_net_if_addrs.return_value = {"Wi-Fi": [non_ipv4_addr]}
+        self.assertIsNone(get_wlan_ip())
+
+    @patch("network.selectors.DefaultSelector")
+    @patch("network.socket.socket")
+    @patch("network.engine.Game")
+    @patch("network.get_wlan_ip", return_value="192.168.1.100")
+    def test_server_init(self, mock_get_ip, mock_game, mock_socket, mock_selector):
+        server = Server()
+        self.assertEqual(server.players, {})
+        self.assertEqual(server.connections, [])
+        self.assertFalse(server.online)
+        self.assertFalse(server.accepts_new_clients)
+        mock_game.assert_called_once_with((0, 0))
+
+    @patch("network.selectors.DefaultSelector")
+    @patch("network.socket.socket")
+    @patch("network.engine.Game")
+    @patch("network.get_wlan_ip", return_value="192.168.1.100")
+    def test_server_context_manager(
+        self, mock_get_ip, mock_game, mock_socket, mock_selector
+    ):
+        mock_socket_instance = mock_socket.return_value
+        mock_selector_instance = mock_selector.return_value
+
+        with Server() as server:
+            self.assertTrue(server.online)
+            mock_socket.assert_called_once()
+            mock_socket_instance.bind.assert_called_once_with(("192.168.1.100", 65432))
+            mock_socket_instance.listen.assert_called_once()
+            mock_socket_instance.setblocking.assert_called_once_with(False)
+            mock_selector_instance.register.assert_called_once()
+
+        # After context exit
+        self.assertFalse(server.online)
+        mock_socket_instance.close.assert_called_once()
+        mock_selector_instance.close.assert_called_once()
+
+    @patch("network.selectors.DefaultSelector")
+    @patch("network.socket.socket")
+    @patch("network.engine.Game")
+    @patch("network.get_wlan_ip", return_value="192.168.1.100")
+    def test_start_stop_server(
+        self, mock_get_ip, mock_game, mock_socket, mock_selector
+    ):
+        server = Server()
+        server.start_server()
+
+        mock_socket.assert_called_once()
+        mock_socket_instance = mock_socket.return_value
+        mock_socket_instance.bind.assert_called_once_with(("192.168.1.100", 65432))
+        mock_socket_instance.listen.assert_called_once()
+        mock_socket_instance.setblocking.assert_called_once_with(False)
+        self.assertTrue(server.online)
+
+        server.stop_server()
+        self.assertFalse(server.online)
+        mock_socket_instance.close.assert_called_once()
+
+    @patch("network.Player")
+    @patch("network.engine.Game")
+    def test_add_player(self, mock_game, mock_player):
+        server = Server()
+        mock_game_instance = mock_game.return_value
+        mock_player_instance = MagicMock()
+        mock_game_instance.add_object.return_value = mock_player_instance
+
+        client_addr = ("127.0.0.1", 12345)
+        player = server.add_player(client_addr, "images/player0.png")
+
+        self.assertEqual(player, mock_player_instance)
+        self.assertEqual(server.players[f"player{client_addr}"], mock_player_instance)
+        mock_game_instance.add_object.assert_called_once_with(
+            f"player{client_addr}",
+            mock_player,
+            image_path="images/player0.png",
+            x=mock_game_instance.width / 2 + 100,
+            y=200,
+            move_acceleration=4,
+            friction=0.25,
+            jump_acceleration=24,
+            gravity=2,
+        )
+
+    @patch("network.selectors.DefaultSelector")
+    @patch("network.socket.socket")
+    @patch("network.engine.Game")
+    @patch("network.get_wlan_ip", return_value="192.168.1.100")
+    def test_accept_wrapper(self, mock_get_ip, mock_game, mock_socket, mock_selector):
+        server = Server()
+        server.add_player = MagicMock()
+
+        mock_sock = MagicMock()
+        mock_connection = MagicMock()
+        client_addr = ("127.0.0.1", 12345)
+        mock_sock.accept.return_value = (mock_connection, client_addr)
+        mock_selector_instance = mock_selector.return_value
+
+        server.accept_wrapper(mock_sock)
+
+        mock_sock.accept.assert_called_once()
+        mock_connection.setblocking.assert_called_once_with(False)
+        self.assertIn(mock_connection, server.connections)
+        server.add_player.assert_called_once_with(client_addr, "images/player0.png")
+        mock_selector_instance.register.assert_called_once()
+
+    @patch("network.json.dumps")
+    def test_serialize_game(self, mock_dumps):
+        server = Server()
+        mock_sprite = MagicMock(image_path="img.png", x=100, y=200, direction=1)
+        server.game.objects = {"player1": mock_sprite}
+
+        expected_data = {
+            "player10": {"image_path": "img.png", "x": 100, "y": 200, "direction": 1}
+        }
+        mock_dumps.return_value = "serialized_data"
+
+        result = server.serialize_game()
+
+        mock_dumps.assert_called_once()
+        self.assertEqual(result, "serialized_data")
+
+    @patch("network.json.loads")
+    def test_apply_controls(self, mock_loads):
+        server = Server()
+        client_addr = ("127.0.0.1", 12345)
+        mock_player = MagicMock()
+        server.players[f"player{client_addr}"] = mock_player
+
+        control_data = b'{"left": true, "right": false}'
+        mock_loads.return_value = {"left": True, "right": False}
+
+        server.apply_controls(client_addr, control_data)
+
+        mock_loads.assert_called_once_with(control_data)
+        self.assertEqual(mock_player.controls, {"left": True, "right": False})
+
+    @patch("network.selectors.DefaultSelector")
+    def test_event_loop(self, mock_selector):
+        server = Server()
+        server.accept_wrapper = MagicMock()
+        server.service_connection = MagicMock()
+
+        # Create mock selector events
+        mock_selector_instance = mock_selector.return_value
+        mock_key1 = MagicMock(fileobj="sock1", data=None)
+        mock_key2 = MagicMock(fileobj="sock2", data="data2")
+        mock_selector_instance.select.return_value = [
+            (mock_key1, selectors.EVENT_READ),
+            (mock_key2, selectors.EVENT_WRITE),
+        ]
+
+        server.event_loop()
+
+        server.accept_wrapper.assert_called_once_with("sock1")
+        server.service_connection.assert_called_once_with(
+            mock_key2, selectors.EVENT_WRITE
+        )
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_echo(self, mock_selector):
+        server = Server()
+        mock_sock = MagicMock()
+        mock_data = SimpleNamespace(addr=("127.0.0.1", 12345), inb=b"", outb=b"")
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        mock_sock.recv.return_value = ECHO
+
+        server.service_connection(mock_key, selectors.EVENT_READ)
+
+        self.assertEqual(mock_data.outb, ECHO)
+        mock_sock.recv.assert_called_once_with(1024)
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_get_frame(self, mock_selector):
+        server = Server()
+        server.serialize_game = MagicMock(return_value="game_data")
+
+        mock_sock = MagicMock()
+        mock_data = SimpleNamespace(addr=("127.0.0.1", 12345), inb=b"", outb=b"")
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        mock_sock.recv.return_value = GET_FRAME
+
+        server.service_connection(mock_key, selectors.EVENT_READ)
+
+        self.assertEqual(mock_data.outb, b"game_data")
+        server.serialize_game.assert_called_once()
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_send_controls(self, mock_selector):
+        server = Server()
+        server.apply_controls = MagicMock()
+
+        mock_sock = MagicMock()
+        client_addr = ("127.0.0.1", 12345)
+        mock_data = SimpleNamespace(addr=client_addr, inb=b"", outb=b"")
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        control_data = b'{"left": true}'
+        mock_sock.recv.return_value = SEND_CONTROLS + control_data
+
+        server.service_connection(mock_key, selectors.EVENT_READ)
+
+        server.apply_controls.assert_called_once_with(client_addr, control_data)
+        self.assertEqual(mock_data.outb, b"OK")
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_disconnect(self, mock_selector):
+        server = Server()
+        mock_sock = MagicMock()
+        client_addr = ("127.0.0.1", 12345)
+        mock_data = SimpleNamespace(addr=client_addr, inb=b"", outb=b"")
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        # Mock player and connections
+        mock_player = MagicMock()
+        server.players[f"player{client_addr}"] = mock_player
+        server.connections = [mock_sock]
+
+        mock_sock.recv.return_value = b""
+
+        server.service_connection(mock_key, selectors.EVENT_READ)
+
+        self.assertEqual(server.connections, [])
+        self.assertNotIn(f"player{client_addr}", server.players)
+        mock_selector_instance = mock_selector.return_value
+        mock_selector_instance.unregister.assert_called_once_with(mock_sock)
+        mock_sock.close.assert_called_once()
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_unknown_command(self, mock_selector):
+        server = Server()
+        mock_sock = MagicMock()
+        mock_data = SimpleNamespace(addr=("127.0.0.1", 12345), inb=b"", outb=b"")
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        mock_sock.recv.return_value = b"unknown_command"
+
+        server.service_connection(mock_key, selectors.EVENT_READ)
+
+        self.assertEqual(mock_data.outb, b"Unknown command")
+
+    @patch("network.selectors.DefaultSelector")
+    def test_service_connection_write_data(self, mock_selector):
+        server = Server()
+        mock_sock = MagicMock()
+        mock_data = SimpleNamespace(
+            addr=("127.0.0.1", 12345), inb=b"", outb=b"test_data"
+        )
+        mock_key = MagicMock(fileobj=mock_sock, data=mock_data)
+
+        mock_sock.send.return_value = 5  # Partial send of "test_"
+
+        server.service_connection(mock_key, selectors.EVENT_WRITE)
+
+        mock_sock.send.assert_called_once_with(b"test_data")
+        self.assertEqual(mock_data.outb, b"data")  # Remaining data
+
+    @patch("network.engine.Game")
+    def test_main(self, mock_game):
+        server = Server()
+        server.event_loop = MagicMock()
+
+        server.main()
+
+        mock_game_instance = mock_game.return_value
+        mock_game_instance.main.assert_called_once_with(server.event_loop)
+
+
+class TestNetwork(unittest.TestCase):
+    @patch("psutil.net_if_addrs")
+    def test_get_wlan_ip(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {
+            "Wi-Fi": [MagicMock(family=socket.AF_INET, address="192.168.1.1")]
+        }
+        self.assertEqual(get_wlan_ip(), "192.168.1.1")
+
+    @patch("psutil.net_if_addrs")
+    def test_get_wlan_ip_no_wlan(self, mock_net_if_addrs):
+        mock_net_if_addrs.return_value = {}
+        self.assertIsNone(get_wlan_ip())
+
+    @patch("socket.socket")
+    @patch("selectors.DefaultSelector")
+    @patch("network.get_wlan_ip", return_value="192.168.1.1")
+    def test_server_start_stop(self, mock_get_wlan_ip, mock_selector, mock_socket):
+        server = Server()
+        server.start_server()
+        self.assertTrue(server.online)
+        server.stop_server()
+        self.assertFalse(server.online)
+
+    @patch("socket.socket")
+    @patch("selectors.DefaultSelector")
+    @patch("network.get_wlan_ip", return_value="192.168.1.1")
+    def test_server_accept_wrapper(self, mock_get_wlan_ip, mock_selector, mock_socket):
+        server = Server()
+        server.start_server()
+        mock_sock = MagicMock()
+        mock_sock.accept.return_value = (MagicMock(), ("127.0.0.1", 12345))
+        server.accept_wrapper(mock_sock)
+        self.assertEqual(len(server.connections), 1)
+        self.assertIn("player('127.0.0.1', 12345)", server.players)
+
+    @patch("socket.socket")
+    @patch("selectors.DefaultSelector")
+    @patch("network.get_wlan_ip", return_value="192.168.1.1")
+    def test_client_connect_disconnect(
+        self, mock_get_wlan_ip, mock_selector, mock_socket
+    ):
+        client = Client("127.0.0.1", 65432)
+        client.connect()
+        self.assertIsNotNone(client.client)
+        client.disconnect()
+
+    @patch("socket.socket")
+    @patch("selectors.DefaultSelector")
+    @patch("network.get_wlan_ip", return_value="192.168.1.1")
+    def test_client_request(self, mock_get_wlan_ip, mock_selector, mock_socket):
+        client = Client("127.0.0.1", 65432)
+        client.connect()
+        mock_socket_instance = mock_socket.return_value
+        mock_socket_instance.recv.return_value = b"OK"
+        response = client.request("test")
+        self.assertEqual(response, b"OK")
+
+    @patch("socket.socket")
+    @patch("selectors.DefaultSelector")
+    @patch("network.get_wlan_ip", return_value="192.168.1.1")
+    def test_client_sync(self, mock_get_wlan_ip, mock_selector, mock_socket):
+        client = Client("127.0.0.1", 65432)
+        mock_socket_instance = mock_socket.return_value
+        mock_socket_instance.recv.return_value = b"OK"
+        with patch.object(client, "request", return_value=b'{"player10": {"image_path": "images/level/0.png", "x": 100, "y": 200, "direction": 1}}'):
+            client.connect()
+            with patch("pygame.key.get_pressed", return_value={
+                pygame.K_LEFT: True,
+                pygame.K_RIGHT: False,
+                pygame.K_UP: False,
+                pygame.K_SPACE: False,
+            }):
+                client.sync()
+        client.disconnect()
 
 
 if __name__ == "__main__":
