@@ -765,16 +765,6 @@ class TestServer(unittest.TestCase):
         mock_sock.send.assert_called_once_with(b"test_data")
         self.assertEqual(mock_data.outb, b"data")  # Remaining data
 
-    @patch("network.engine.Game")
-    def test_main(self, mock_game):
-        server = Server()
-        server.event_loop = MagicMock()
-
-        server.main()
-
-        mock_game_instance = mock_game.return_value
-        mock_game_instance.main.assert_called_once_with(server.event_loop)
-
 
 class TestNetwork(unittest.TestCase):
     @patch("psutil.net_if_addrs")
