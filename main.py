@@ -9,7 +9,10 @@ if __name__ == "__main__":
         try:
             with client:
                 print(client.request(network.ECHO).decode())
-                client.request(network.JOIN_GAME + "images/player0.png".encode())
+                client.request(
+                    network.JOIN_GAME
+                    + f"images/player{sys.argv[2] if len(sys.argv) > 2 else 0}.png".encode()
+                )
                 client.main()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
