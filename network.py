@@ -96,6 +96,7 @@ class Server:
                 data.outb += self.serialize_game().encode()
             elif recv_data.startswith(SEND_CONTROLS):
                 self.apply_controls(data.addr, recv_data[len(SEND_CONTROLS) :])
+                data.outb += b"OK"
             elif not recv_data:
                 self.connections.remove(sock)
                 del self.players[f"player{data.addr}"]
