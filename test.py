@@ -842,14 +842,21 @@ class TestNetwork(unittest.TestCase):
         client = Client("127.0.0.1", 65432)
         mock_socket_instance = mock_socket.return_value
         mock_socket_instance.recv.return_value = b"OK"
-        with patch.object(client, "request", return_value=b'{"player10": {"image_path": "images/level/0.png", "x": 100, "y": 200, "direction": 1}}'):
+        with patch.object(
+            client,
+            "request",
+            return_value=b'{"player10": {"image_path": "images/level/0.png", "x": 100, "y": 200, "direction": 1}}',
+        ):
             client.connect()
-            with patch("pygame.key.get_pressed", return_value={
-                pygame.K_LEFT: True,
-                pygame.K_RIGHT: False,
-                pygame.K_UP: False,
-                pygame.K_SPACE: False,
-            }):
+            with patch(
+                "pygame.key.get_pressed",
+                return_value={
+                    pygame.K_LEFT: True,
+                    pygame.K_RIGHT: False,
+                    pygame.K_UP: False,
+                    pygame.K_SPACE: False,
+                },
+            ):
                 client.sync()
         client.disconnect()
 
