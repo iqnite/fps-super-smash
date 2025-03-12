@@ -12,6 +12,7 @@ PORT = 65432
 
 
 ECHO = b"echo"
+JOIN_GAME = b"join_game:"
 GET_FRAME = b"get_frame"
 SEND_CONTROLS = b"controls:"
 
@@ -77,7 +78,6 @@ class Server:
         connection.setblocking(False)
         data = SimpleNamespace(addr=address, inb=b"", outb=b"")
         self.connections.append(connection)
-        self.add_player(address, "images/player0.png")
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
         self.selector.register(connection, events, data=data)
 
@@ -91,6 +91,9 @@ class Server:
                 recv_data = b""
             if recv_data == ECHO:
                 data.outb += recv_data
+            elif recv_data.startswith(JOIN_GAME):
+                self.add_player(data.addr, recv_data[len(JOIN_GAME) :].decode())
+                data.outb += b"OK"
             elif recv_data == GET_FRAME:
                 data.outb += self.serialize_game().encode()
             elif recv_data.startswith(SEND_CONTROLS):

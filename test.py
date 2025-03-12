@@ -610,7 +610,6 @@ class TestServer(unittest.TestCase):
         mock_sock.accept.assert_called_once()
         mock_connection.setblocking.assert_called_once_with(False)
         self.assertIn(mock_connection, server.connections)
-        server.add_player.assert_called_once_with(client_addr, "images/player0.png")
         mock_selector_instance.register.assert_called_once()
 
     @patch("network.json.dumps")
@@ -810,7 +809,6 @@ class TestNetwork(unittest.TestCase):
         mock_sock.accept.return_value = (MagicMock(), ("127.0.0.1", 12345))
         server.accept_wrapper(mock_sock)
         self.assertEqual(len(server.connections), 1)
-        self.assertIn("player('127.0.0.1', 12345)", server.players)
 
     @patch("socket.socket")
     @patch("selectors.DefaultSelector")
