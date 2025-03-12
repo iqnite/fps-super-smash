@@ -1,4 +1,6 @@
 from datetime import datetime
+
+import pygame
 import attacks
 from engine import Game, Sprite
 
@@ -71,6 +73,9 @@ class Player(Sprite):
         else:
             self._shots = 0
 
+    def keyboard_control(self):
+        self.controls = get_controls()
+
     def shoot(self):
         bullet = self.game.add_object(
             f"shoot_attack{datetime.now()}",
@@ -97,3 +102,13 @@ class Player(Sprite):
     def check_health(self):
         if self.health <= 0:
             self.game.remove_object(self)
+
+
+def get_controls():
+    key = pygame.key.get_pressed()
+    return {
+        "left": key[pygame.K_LEFT],
+        "right": key[pygame.K_RIGHT],
+        "jump": key[pygame.K_UP],
+        "shoot": key[pygame.K_SPACE],
+    }

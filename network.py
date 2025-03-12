@@ -4,9 +4,8 @@ import json
 from types import SimpleNamespace
 
 import psutil
-import pygame
 import engine
-from player import Player
+from player import Player, get_controls
 
 PORT = 65432
 
@@ -61,12 +60,14 @@ class Server:
         self.server.close()
         self.selector.close()
 
-    def main(self):
-        self.game.main(self.loop)
+    def main(self, func=None):
+        self.game.main(lambda: self.loop(func))
 
-    def loop(self):
+    def loop(self, func=None):
         self.event_loop()
         self.game.screen.fill("black")
+        if func:
+            func()
 
     def event_loop(self):
         events = self.selector.select(timeout=None)
@@ -185,15 +186,4 @@ class Client:
         self.game.objects.clear()
         for name, object in json.loads(next_draw).items():
             self.game.add_object(name, engine.Sprite, **object)
-        key = pygame.key.get_pressed()
-        self.request(
-            SEND_CONTROLS
-            + json.dumps(
-                {
-                    "left": key[pygame.K_LEFT],
-                    "right": key[pygame.K_RIGHT],
-                    "jump": key[pygame.K_UP],
-                    "shoot": key[pygame.K_SPACE],
-                }
-            ).encode()
-        )
+        self.request(SEND_CONTROLS + json.dumps(get_controls()).encode())

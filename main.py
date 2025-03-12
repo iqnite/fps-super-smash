@@ -1,6 +1,7 @@
 import sys
 import network
 from level import Level
+import player
 
 
 if __name__ == "__main__":
@@ -30,5 +31,7 @@ if __name__ == "__main__":
             y_velocity=1,
             common_sprite_args={"teleport": {"+y": {720: 200}}},
         )
+        server.add_player(0, "images/player1.png")
+
         with server:
-            server.main()
+            server.main(lambda: server.players["player0"].keyboard_control())
