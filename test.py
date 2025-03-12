@@ -494,7 +494,6 @@ class TestShootAttack(unittest.TestCase):
 
 
 class TestServer(unittest.TestCase):
-
     @patch("network.psutil.net_if_addrs")
     def test_get_wlan_ip(self, mock_net_if_addrs):
         # Test successful IP retrieval
