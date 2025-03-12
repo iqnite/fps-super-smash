@@ -166,7 +166,7 @@ class Client:
 
     def request(self, data: str | bytes):
         self.client.sendall(data.encode() if isinstance(data, str) else data)
-        data = self.client.recv(1024)
+        data = self.client.recv(4096)
         return data
 
     def main(self):
