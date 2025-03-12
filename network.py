@@ -37,7 +37,6 @@ class Server:
         self.online: bool = False
         self.accepts_new_clients: bool = False
         self.selector = selectors.DefaultSelector()
-        self.input_buffer: list[bytes] = []
         self.game: engine.Game = engine.Game((0, 0))
 
     def __enter__(self):
@@ -80,7 +79,8 @@ class Server:
         data = SimpleNamespace(addr=address, inb=b"", outb=b"")
         self.connections.append(connection)
         self.add_player(address, "images/player0.png")
-        self.selector.register(connection, selectors.EVENT_READ, data=data)
+        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        self.selector.register(connection, events, data=data)
 
     def service_connection(self, key, mask):
         sock: socket.socket = key.fileobj

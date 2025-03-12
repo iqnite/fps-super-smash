@@ -8,7 +8,7 @@ if __name__ == "__main__":
         client = network.Client(sys.argv[1], network.PORT)
         try:
             with client:
-                client.request(network.ECHO)
+                print(client.request(network.ECHO))
                 client.main()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
