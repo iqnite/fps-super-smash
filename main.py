@@ -1,7 +1,6 @@
 import sys
 import network
 from level import Level
-import player
 
 
 if __name__ == "__main__":
