@@ -62,7 +62,11 @@ class Server:
         self.selector.close()
 
     def main(self):
-        self.game.main(self.event_loop)
+        self.game.main(self.loop)
+
+    def loop(self):
+        self.event_loop()
+        self.game.screen.fill("black")
 
     def event_loop(self):
         events = self.selector.select(timeout=None)

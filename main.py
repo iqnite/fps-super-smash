@@ -14,6 +14,9 @@ if __name__ == "__main__":
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
             quit()
+        except ConnectionResetError:
+            print("Connection reset by server.")
+            quit()
     else:
         server = network.Server()
         server.game.add_object(
