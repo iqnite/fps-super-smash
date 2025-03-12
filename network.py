@@ -174,7 +174,7 @@ class Client:
         self.game.main(self.sync)
 
     def sync(self):
-        next_draw = self.request(GET_FRAME)
+        next_draw = self.request(GET_FRAME).decode()
         self.game.screen.fill("black")
         self.game.objects.clear()
         for name, object in json.loads(next_draw).items():
