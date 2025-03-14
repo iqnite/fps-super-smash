@@ -1,6 +1,7 @@
 import socket
 import selectors
 import json
+import threading
 from types import SimpleNamespace
 
 import psutil
@@ -60,25 +61,25 @@ class Server:
         self.server.close()
         self.selector.close()
 
-    def main(self, func=None):
-        self.game.main(lambda: self.loop(func))
-
-    def loop(self, func=None):
-        self.event_loop()
-        self.game.screen.fill("black")
-        if func:
-            func()
+    def main(self):
+        self.event_thread = threading.Thread(target=self.event_loop)
+        self.event_thread.start()
+        self.game.main(self.game_loop)
 
     def event_loop(self):
-        events = self.selector.select(timeout=None)
-        for key, mask in events:
-            if key.data is None:
-                self.accept_wrapper(key.fileobj)
-            else:
-                self.service_connection(key, mask)
+        while self.online:
+            events = self.selector.select(timeout=None)
+            for key, mask in events:
+                if key.data is None:
+                    self.accept_wrapper(key.fileobj)
+                else:
+                    self.service_connection(key, mask)
 
     def accept_wrapper(self, sock):
-        connection, address = sock.accept()
+        try:
+            connection, address = sock.accept()
+        except OSError:
+            return
         print("Accepted connection from", address)
         connection.setblocking(False)
         data = SimpleNamespace(addr=address, inb=b"", outb=b"")
@@ -130,6 +131,10 @@ class Server:
                 for i, sprite in enumerate(getattr(obj, "sprites", [obj]))
             }
         )
+    
+    def game_loop(self):
+        self.game.screen.fill("black")
+        self.players["player0"].keyboard_control()
 
     def apply_controls(self, client, data: bytes):
         self.players[f"player{client}"].controls = json.loads(data)

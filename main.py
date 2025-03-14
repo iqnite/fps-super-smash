@@ -33,4 +33,4 @@ if __name__ == "__main__":
         server.add_player(0, "images/player1.png")
 
         with server:
-            server.main(lambda: server.players["player0"].keyboard_control())
+            server.main()
