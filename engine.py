@@ -12,23 +12,26 @@ class Game:
 
     def main(self, func=None):
         while self.running:
-            # poll for events
-            # pygame.QUIT event means the user clicked X to close your window
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-            if func:
-                func()
-            for obj in list(self.objects.values()).copy():
-                if obj and obj.loop:
-                    obj.loop()
-            # flip() the display to put your work on screen
-            pygame.display.flip()
-            # limits FPS to 60
-            # dt is delta time in seconds since last frame, used for framerate-
-            # independent physics.
-            self.dt = self.clock.tick(60) / 1000
+            self.loop(func)
         pygame.quit()
+
+    def loop(self, func=None):
+        # poll for events
+        # pygame.QUIT event means the user clicked X to close your window
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+        if func:
+            func()
+        for obj in list(self.objects.values()).copy():
+            if obj and obj.loop:
+                obj.loop()
+        # flip() the display to put your work on screen
+        pygame.display.flip()
+        # limits FPS to 60
+        # dt is delta time in seconds since last frame, used for framerate-
+        # independent physics.
+        self.dt = self.clock.tick(60) / 1000
 
     def add_object(self, name, func, *args, **kwargs):
         obj = func(self, *args, **kwargs)
@@ -63,6 +66,7 @@ class Sprite:
         teleport=dict(),
     ):
         self.game = game
+        self.image_path = image_path
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
