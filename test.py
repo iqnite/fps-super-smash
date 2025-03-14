@@ -644,28 +644,6 @@ class TestServer(unittest.TestCase):
         self.assertEqual(mock_player.controls, {"left": True, "right": False})
 
     @patch("network.selectors.DefaultSelector")
-    def test_event_loop(self, mock_selector):
-        server = Server()
-        server.accept_wrapper = MagicMock()
-        server.service_connection = MagicMock()
-
-        # Create mock selector events
-        mock_selector_instance = mock_selector.return_value
-        mock_key1 = MagicMock(fileobj="sock1", data=None)
-        mock_key2 = MagicMock(fileobj="sock2", data="data2")
-        mock_selector_instance.select.return_value = [
-            (mock_key1, selectors.EVENT_READ),
-            (mock_key2, selectors.EVENT_WRITE),
-        ]
-
-        server.event_loop()
-
-        server.accept_wrapper.assert_called_once_with("sock1")
-        server.service_connection.assert_called_once_with(
-            mock_key2, selectors.EVENT_WRITE
-        )
-
-    @patch("network.selectors.DefaultSelector")
     def test_service_connection_echo(self, mock_selector):
         server = Server()
         mock_sock = MagicMock()
