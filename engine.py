@@ -168,9 +168,11 @@ class Sprite:
                         self.y = b
 
     def draw(self):
-        self.image = self.default_image if self.direction == 1 else self.flipped_image
-        self.game.screen.blit(self.image, (self.x, self.y))
-
+        try:
+            self.image = self.default_image if self.direction == 1 else self.flipped_image
+            self.game.screen.blit(self.image, (self.x, self.y))
+        except pygame.error:
+            pass
 
 class MultiSprite:
     def __init__(self, game: Game, sprite_args):
