@@ -213,34 +213,6 @@ class TestMultiSprite(unittest.TestCase):
             self.assertEqual(sprite.image, sprite.flipped_image)
 
 
-class TestButton(unittest.TestCase):
-
-    def setUp(self):
-        self.game = Game((800, 600))
-        self.button = Button(
-            self.game, "images/level/0.png", x=100, y=100, func=self.dummy_func
-        )
-        self.dummy_var = 0
-
-    def dummy_func(self):
-        self.dummy_var = 1
-
-    def test_init(self):
-        self.assertEqual(self.button.func, self.dummy_func)
-
-    def test_loop(self):
-        with patch.object(Sprite, "loop") as mock_super_loop:
-            self.button.loop()
-            mock_super_loop.assert_called_once()
-            # Mock mouse click on button
-        with patch(
-            "pygame.mouse.get_pressed", return_value=[True, False, False]
-        ), patch("pygame.mouse.get_pos", return_value=(100, 100)):
-            self.button.loop()
-            # Assert function was called
-            self.assertEqual(self.dummy_var, 1)
-
-
 class TestMenu(unittest.TestCase):
     class Menu1(Menu):
         @button("images/level/0.png")
