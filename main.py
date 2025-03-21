@@ -4,7 +4,7 @@ from level import Level
 
 
 class StartMenu(engine.Menu):
-    
+
     @engine.button("images/fps-logo.svg")
     def connect(self):
         game.running = False
@@ -13,10 +13,7 @@ class StartMenu(engine.Menu):
         try:
             with client:
                 print(client.request(network.ECHO).decode())
-                client.request(
-                    network.JOIN_GAME
-                    + f"images/player{0}.png".encode()
-                )
+                client.request(network.JOIN_GAME + f"images/player{0}.png".encode())
                 client.main()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
@@ -24,6 +21,7 @@ class StartMenu(engine.Menu):
         except ConnectionResetError:
             print("Connection reset by server.")
             quit()
+
     @engine.button("images/player0.png")
     def start(self):
         server = network.Server()
@@ -39,9 +37,12 @@ class StartMenu(engine.Menu):
 
         with server:
             server.main()
+
     @engine.button("images/player1.png")
     def exit(self):
         quit()
-game = engine.Game((0,0))
-game.add_object("StartMenu", StartMenu, button_distance = 100)
+
+
+game = engine.Game((0, 0))
+game.add_object("StartMenu", StartMenu, button_distance=100)
 game.main()
