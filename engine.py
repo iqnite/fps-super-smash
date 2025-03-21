@@ -169,10 +169,13 @@ class Sprite:
 
     def draw(self):
         try:
-            self.image = self.default_image if self.direction == 1 else self.flipped_image
+            self.image = (
+                self.default_image if self.direction == 1 else self.flipped_image
+            )
             self.game.screen.blit(self.image, (self.x, self.y))
         except pygame.error:
             pass
+
 
 class MultiSprite:
     def __init__(self, game: Game, sprite_args):
@@ -227,7 +230,11 @@ class Menu:
                 func=func,
                 game=game,
                 menu=self,
-                x=game.width / 2,
+                x=game.width / 2
+                - pygame.image.load(
+                    getattr(self, name)._engine_kwargs_["image_path"]
+                ).get_width()
+                / 2,
                 y=game.height / 2 - 100 + i * button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
@@ -246,10 +253,13 @@ class Button(Sprite):
         self.func = func
 
     def loop(self):
-        super().loop()
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
-            if pygame.mouse.get_pressed()[0]:
-                self.func(self.menu)
+        try:
+            super().loop()
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                if pygame.mouse.get_pressed()[0]:
+                    self.func(self.menu)
+        except pygame.error:
+            pass
 
 
 def button(image_path: str):
