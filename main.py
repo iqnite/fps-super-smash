@@ -1,3 +1,4 @@
+import pygame
 import engine
 import network
 from level import Level
@@ -44,5 +45,8 @@ class StartMenu(engine.Menu):
 
 
 game = engine.Game((0, 0))
+bg_image = pygame.image.load("images/Menu/Background.png")
+bg_image = pygame.transform.scale(bg_image, (game.width, game.height))
+game.screen.blit(bg_image, (0, 0))
 game.add_object("StartMenu", StartMenu, button_distance=100)
 game.main()
