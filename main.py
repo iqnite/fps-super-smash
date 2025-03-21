@@ -1,17 +1,21 @@
-import sys
+import engine
 import network
 from level import Level
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        client = network.Client(sys.argv[1], network.PORT)
+class StartMenu(engine.Menu):
+    
+    @engine.button("images/fps-logo.svg")
+    def connect(self):
+        game.running = False
+        ip = input("Enter IP Address: ")
+        client = network.Client(ip, network.PORT)
         try:
             with client:
                 print(client.request(network.ECHO).decode())
                 client.request(
                     network.JOIN_GAME
-                    + f"images/player{sys.argv[2] if len(sys.argv) > 2 else 0}.png".encode()
+                    + f"images/player{0}.png".encode()
                 )
                 client.main()
         except ConnectionRefusedError:
@@ -20,7 +24,8 @@ if __name__ == "__main__":
         except ConnectionResetError:
             print("Connection reset by server.")
             quit()
-    else:
+    @engine.button("images/player0.png")
+    def start(self):
         server = network.Server()
         server.game.add_object(
             "level",
@@ -34,3 +39,9 @@ if __name__ == "__main__":
 
         with server:
             server.main()
+    @engine.button("images/player1.png")
+    def exit(self):
+        quit()
+game = engine.Game((0,0))
+game.add_object("StartMenu", StartMenu, button_distance = 100)
+game.main()
