@@ -224,7 +224,7 @@ class Button(Sprite):
     def loop(self):
         super().loop()
         if self.rect.collidepoint(pygame.mouse.get_pos()):
-            if pygame.MOUSEBUTTONDOWN:
+            if pygame.mouse.get_pressed()[0]:
                 self.func()
 
 
