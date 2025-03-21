@@ -21,13 +21,16 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-        if func:
-            func()
-        for obj in list(self.objects.values()).copy():
-            if obj and obj.loop:
-                obj.loop()
-        # flip() the display to put your work on screen
-        pygame.display.flip()
+        try:
+            if func:
+                func()
+            for obj in list(self.objects.values()).copy():
+                if obj and obj.loop:
+                    obj.loop()
+            # flip() the display to put your work on screen
+            pygame.display.flip()
+        except pygame.error:
+            pass
         # limits FPS to 60
         # dt is delta time in seconds since last frame, used for framerate-
         # independent physics.
@@ -168,13 +171,8 @@ class Sprite:
                         self.y = b
 
     def draw(self):
-        try:
-            self.image = (
-                self.default_image if self.direction == 1 else self.flipped_image
-            )
-            self.game.screen.blit(self.image, (self.x, self.y))
-        except pygame.error:
-            pass
+        self.image = self.default_image if self.direction == 1 else self.flipped_image
+        self.game.screen.blit(self.image, (self.x, self.y))
 
 
 class MultiSprite:
@@ -253,13 +251,10 @@ class Button(Sprite):
         self.func = func
 
     def loop(self):
-        try:
-            super().loop()
-            if self.rect.collidepoint(pygame.mouse.get_pos()):
-                if pygame.mouse.get_pressed()[0]:
-                    self.func(self.menu)
-        except pygame.error:
-            pass
+        super().loop()
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.mouse.get_pressed()[0]:
+                self.func(self.menu)
 
 
 def button(image_path: str):
