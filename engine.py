@@ -216,34 +216,15 @@ class MultiSprite:
             sprite.draw()
 
 
-class Button(Sprite):
-    def __init__(self, game: Game, image_path: str, x, y, func):
-        super().__init__(game, image_path, x=x, y=y, collidable=False)
-        self.func = func
-
-    def loop(self):
-        super().loop()
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
-            if pygame.mouse.get_pressed()[0]:
-                self.func()
-
-
-def button(image_path: str):
-    def decorator(func):
-        func._engine_type_ = Button
-        func._engine_kwargs_ = {"image_path": image_path}
-        return func
-
-    return decorator
-
-
 class Menu:
     def __init__(self, game: Game, button_distance: int):
+        self.game = game
         self.buttons = [
             func._engine_type_(
                 **getattr(self, name)._engine_kwargs_,
                 func=func,
                 game=game,
+                menu=self,
                 x=game.width / 2,
                 y=game.height / 2 + i * button_distance
             )
@@ -254,3 +235,25 @@ class Menu:
     def loop(self):
         for button in self.buttons:
             button.loop()
+
+
+class Button(Sprite):
+    def __init__(self, game: Game, menu: Menu, image_path: str, x, y, func):
+        super().__init__(game, image_path, x=x, y=y, collidable=False)
+        self.menu = menu
+        self.func = func
+
+    def loop(self):
+        super().loop()
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.mouse.get_pressed()[0]:
+                self.func(self.menu)
+
+
+def button(image_path: str):
+    def decorator(func):
+        func._engine_type_ = Button
+        func._engine_kwargs_ = {"image_path": image_path}
+        return func
+
+    return decorator

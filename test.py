@@ -217,8 +217,9 @@ class TestButton(unittest.TestCase):
 
     def setUp(self):
         self.game = Game((800, 600))
+        self.menu = Menu(self.game, 10)
         self.button = Button(
-            self.game, "images/level/0.png", x=100, y=100, func=self.dummy_func
+            self.game, self.menu, "images/level/0.png", x=100, y=100, func=self.dummy_func
         )
         self.dummy_var = 0
 

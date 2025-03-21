@@ -4,10 +4,9 @@ from level import Level
 
 
 class StartMenu(engine.Menu):
-
     @engine.button("images/fps-logo.svg")
     def connect(self):
-        game.running = False
+        self.game.running = False
         ip = input("Enter IP Address: ")
         client = network.Client(ip, network.PORT)
         try:
@@ -24,6 +23,7 @@ class StartMenu(engine.Menu):
 
     @engine.button("images/player0.png")
     def start(self):
+        self.game.running = False
         server = network.Server()
         server.game.add_object(
             "level",
@@ -40,7 +40,7 @@ class StartMenu(engine.Menu):
 
     @engine.button("images/player1.png")
     def exit(self):
-        quit()
+        self.game.running = False
 
 
 game = engine.Game((0, 0))
