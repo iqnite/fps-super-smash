@@ -226,7 +226,7 @@ class Menu:
                 game=game,
                 menu=self,
                 x=game.width / 2,
-                y=game.height / 2 + i * button_distance
+                y=game.height / 2 - 100 + i * button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")

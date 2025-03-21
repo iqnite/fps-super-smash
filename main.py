@@ -4,7 +4,7 @@ from level import Level
 
 
 class StartMenu(engine.Menu):
-    @engine.button("images/fps-logo.svg")
+    @engine.button("images/attacks/shoot0.png")
     def connect(self):
         self.game.running = False
         ip = input("Enter IP Address: ")
