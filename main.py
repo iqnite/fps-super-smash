@@ -28,7 +28,7 @@ if __name__ == "__main__":
             pos_filepath="level.csv",
             image_filepath="images/level/{}.png",
             y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {720: 200}}},
+            common_sprite_args={"teleport": {"+y": {720: 0}}},
         )
         server.add_player(0, "images/player1.png")
 
