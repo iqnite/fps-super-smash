@@ -4,7 +4,7 @@ from level import Level
 
 
 class StartMenu(engine.Menu):
-    @engine.button("images/attacks/shoot0.png")
+    @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
         ip = input("Enter IP Address: ")
@@ -21,7 +21,7 @@ class StartMenu(engine.Menu):
             print("Connection reset by server.")
             quit()
 
-    @engine.button("images/player0.png")
+    @engine.button("images/Menu/Start.png")
     def start(self):
         self.game.running = False
         server = network.Server()
@@ -38,7 +38,7 @@ class StartMenu(engine.Menu):
         with server:
             server.main()
 
-    @engine.button("images/player1.png")
+    @engine.button("images/Menu/Cancel.png")
     def exit(self):
         self.game.running = False
 
