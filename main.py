@@ -34,7 +34,7 @@ class StartMenu(engine.Menu):
             pos_filepath="level.csv",
             image_filepath="images/level/{}.png",
             y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {720: 0}}},
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
         )
         server.add_player(0, "images/player1.png")
 
