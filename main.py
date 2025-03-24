@@ -1,18 +1,19 @@
-import sys
+import pygame
+import engine
 import network
 from level import Level
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        client = network.Client(sys.argv[1], network.PORT)
+class StartMenu(engine.Menu):
+    @engine.button("images/Menu/Login.png")
+    def connect(self):
+        self.game.running = False
+        ip = input("Enter IP Address: ")
+        client = network.Client(ip, network.PORT)
         try:
             with client:
                 print(client.request(network.ECHO).decode())
-                client.request(
-                    network.JOIN_GAME
-                    + f"images/player{sys.argv[2] if len(sys.argv) > 2 else 0}.png".encode()
-                )
+                client.request(network.JOIN_GAME + f"images/player{0}.png".encode())
                 client.main()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
@@ -20,7 +21,10 @@ if __name__ == "__main__":
         except ConnectionResetError:
             print("Connection reset by server.")
             quit()
-    else:
+
+    @engine.button("images/Menu/Start.png")
+    def start(self):
+        self.game.running = False
         server = network.Server()
         server.game.add_object(
             "level",
@@ -34,3 +38,15 @@ if __name__ == "__main__":
 
         with server:
             server.main()
+
+    @engine.button("images/Menu/Cancel.png")
+    def exit(self):
+        self.game.running = False
+
+
+game = engine.Game((0, 0))
+bg_image = pygame.image.load("images/Menu/Background.png")
+bg_image = pygame.transform.scale(bg_image, (game.width, game.height))
+game.screen.blit(bg_image, (0, 0))
+game.add_object("StartMenu", StartMenu, button_distance=100)
+game.main()

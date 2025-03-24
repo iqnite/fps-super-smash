@@ -21,13 +21,16 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-        if func:
-            func()
-        for obj in list(self.objects.values()).copy():
-            if obj and obj.loop:
-                obj.loop()
-        # flip() the display to put your work on screen
-        pygame.display.flip()
+        try:
+            if func:
+                func()
+            for obj in list(self.objects.values()).copy():
+                if obj and obj.loop:
+                    obj.loop()
+            # flip() the display to put your work on screen
+            pygame.display.flip()
+        except pygame.error:
+            pass
         # limits FPS to 60
         # dt is delta time in seconds since last frame, used for framerate-
         # independent physics.
@@ -216,16 +219,42 @@ class MultiSprite:
             sprite.draw()
 
 
+class Menu:
+    def __init__(self, game: Game, button_distance: int):
+        self.game = game
+        self.buttons = [
+            func._engine_type_(
+                **getattr(self, name)._engine_kwargs_,
+                func=func,
+                game=game,
+                menu=self,
+                x=game.width / 2
+                - pygame.image.load(
+                    getattr(self, name)._engine_kwargs_["image_path"]
+                ).get_width()
+                / 2,
+                y=game.height / 2 - 100 + i * button_distance
+            )
+            for i, (name, func) in enumerate(self.__class__.__dict__.items())
+            if hasattr(func, "_engine_type_")
+        ]
+
+    def loop(self):
+        for button in self.buttons:
+            button.loop()
+
+
 class Button(Sprite):
-    def __init__(self, game: Game, image_path: str, x, y, func):
+    def __init__(self, game: Game, menu: Menu, image_path: str, x, y, func):
         super().__init__(game, image_path, x=x, y=y, collidable=False)
+        self.menu = menu
         self.func = func
 
     def loop(self):
         super().loop()
         if self.rect.collidepoint(pygame.mouse.get_pos()):
-            if pygame.MOUSEBUTTONDOWN:
-                self.func()
+            if pygame.mouse.get_pressed()[0]:
+                self.func(self.menu)
 
 
 def button(image_path: str):
@@ -235,22 +264,3 @@ def button(image_path: str):
         return func
 
     return decorator
-
-
-class Menu:
-    def __init__(self, game: Game, button_distance: int):
-        self.buttons = [
-            func._engine_type_(
-                **getattr(self, name)._engine_kwargs_,
-                func=func,
-                game=game,
-                x=game.width / 2,
-                y=game.height / 2 + i * button_distance
-            )
-            for i, (name, func) in enumerate(self.__class__.__dict__.items())
-            if hasattr(func, "_engine_type_")
-        ]
-
-    def loop(self):
-        for button in self.buttons:
-            button.loop()
