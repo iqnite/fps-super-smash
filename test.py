@@ -226,7 +226,7 @@ class TestMenu(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
         self.button_distance = 10
-        self.menu = self.Menu1(self.game, 10)
+        self.menu = self.Menu1(self.game)
 
     def test_init(self):
         self.assertIsInstance(self.menu.buttons, list)

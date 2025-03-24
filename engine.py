@@ -220,7 +220,9 @@ class MultiSprite:
 
 
 class Menu:
-    def __init__(self, game: Game, button_distance: int):
+    button_distance: int = 100
+
+    def __init__(self, game: Game):
         self.game = game
         self.buttons = [
             func._engine_type_(
@@ -233,7 +235,7 @@ class Menu:
                     getattr(self, name)._engine_kwargs_["image_path"]
                 ).get_width()
                 / 2,
-                y=game.height / 2 - 100 + i * button_distance
+                y=game.height / 2 - 100 + i * self.button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")
@@ -249,12 +251,19 @@ class Button(Sprite):
         super().__init__(game, image_path, x=x, y=y, collidable=False)
         self.menu = menu
         self.func = func
+        self.flipped_image = pygame.transform.scale(
+            self.default_image,
+            (self.default_image.get_width() * 1.3, self.default_image.get_height()*1.3),
+        )
 
     def loop(self):
         super().loop()
         if self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.direction = -1
             if pygame.mouse.get_pressed()[0]:
                 self.func(self.menu)
+        else:
+            self.direction = 1
 
 
 def button(image_path: str):
