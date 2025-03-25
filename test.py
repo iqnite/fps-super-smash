@@ -384,7 +384,9 @@ class TestPlayer(unittest.TestCase):
         self.assertNotIn("player", self.game.objects)
 
     def test_on_hit(self):
-        self.player.on_hit(attacks.Attack(self.game, image_path="images/level/0.png"))
+        self.player.on_hit(
+            attacks.Attack(self.game, parent=self, image_path="images/level/0.png")
+        )
         self.assertEqual(self.player.health, 95)
 
 
@@ -428,8 +430,20 @@ class TestLevel(unittest.TestCase):
 class TestShootAttack(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
+        self.dummy_player = self.game.add_object(
+            "player",
+            Player,
+            move_acceleration=0.5,
+            friction=0.1,
+            jump_acceleration=10,
+            gravity=0.5,
+            image_path="images/level/0.png",
+            x=0,
+            y=0,
+        )
         self.attack = attacks.ShootAttack(
             self.game,
+            parent=self.dummy_player,
             x_velocity=10,
             y_velocity=10,
             image_path="images/level/0.png",
@@ -442,18 +456,18 @@ class TestShootAttack(unittest.TestCase):
 
     def test_loop(self):
         self.game.objects["shoot_attack"] = self.attack
-        dummy_player = self.game.add_object(
-            "player",
+        dummy_sprite = self.game.add_object(
+            "sprite",
             Player,
-            move_acceleration=0.5,
-            friction=0.1,
-            jump_acceleration=10,
-            gravity=0.5,
             image_path="images/level/0.png",
             x=0,
             y=0,
+            move_acceleration=0,
+            friction=0,
+            jump_acceleration=0,
+            gravity=0,
         )
-        with patch.object(dummy_player, "on_hit") as mock_on_hit:
+        with patch.object(dummy_sprite, "on_hit") as mock_on_hit:
             self.attack.loop()
             self.assertEqual(self.attack.x, self.attack.x_velocity)
             self.assertEqual(self.attack.y, self.attack.y_velocity)
