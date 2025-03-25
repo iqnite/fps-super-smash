@@ -73,9 +73,9 @@ class Sprite:
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.default_image = pygame.image.load(image_path)
-        self.flipped_image = pygame.transform.flip(self.default_image, True, False)
-        self.image = self.default_image
+        self.image1 = pygame.image.load(image_path)
+        self.image2 = pygame.transform.flip(self.image1, True, False)
+        self.image = self.image1
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
@@ -171,7 +171,7 @@ class Sprite:
                         self.y = b
 
     def draw(self):
-        self.image = self.default_image if self.direction == 1 else self.flipped_image
+        self.image = self.image1 if self.direction == 1 else self.image2
         self.game.screen.blit(self.image, (self.x, self.y))
 
 
@@ -222,7 +222,11 @@ class MultiSprite:
 class Menu:
     button_distance: int = 100
 
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, x=None, y=None):
+        if x is None:
+            x = game.width / 2
+        if y is None:
+            y = game.height / 2 - 100
         self.game = game
         self.buttons = [
             func._engine_type_(
@@ -230,12 +234,12 @@ class Menu:
                 func=func,
                 game=game,
                 menu=self,
-                x=game.width / 2
+                x=x
                 - pygame.image.load(
                     getattr(self, name)._engine_kwargs_["image_path"]
                 ).get_width()
                 / 2,
-                y=game.height / 2 - 100 + i * self.button_distance
+                y=y + i * self.button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")
@@ -251,9 +255,12 @@ class Button(Sprite):
         super().__init__(game, image_path, x=x, y=y, collidable=False)
         self.menu = menu
         self.func = func
-        self.flipped_image = pygame.transform.scale(
-            self.default_image,
-            (self.default_image.get_width() * 1.3, self.default_image.get_height()*1.3),
+        self.image2 = pygame.transform.scale(
+            self.image1,
+            (
+                self.image1.get_width() * 1.3,
+                self.image1.get_height() * 1.3,
+            ),
         )
 
     def loop(self):

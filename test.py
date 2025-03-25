@@ -123,7 +123,7 @@ class TestSprite(unittest.TestCase):
     def test_flip_image(self):
         self.sprite.direction = -1
         self.sprite.draw()
-        self.assertEqual(self.sprite.image, self.sprite.flipped_image)
+        self.assertEqual(self.sprite.image, self.sprite.image2)
 
 
 class TestMultiSprite(unittest.TestCase):
@@ -210,7 +210,7 @@ class TestMultiSprite(unittest.TestCase):
             sprite.direction = -1
         self.multi_sprite.draw()
         for sprite in self.multi_sprite.sprites:
-            self.assertEqual(sprite.image, sprite.flipped_image)
+            self.assertEqual(sprite.image, sprite.image2)
 
 
 class TestMenu(unittest.TestCase):
