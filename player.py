@@ -80,7 +80,9 @@ class Player(Sprite):
         bullet = self.game.add_object(
             f"shoot_attack{datetime.now()}",
             attacks.ShootAttack,
-            x_velocity=10 * self.direction,
+            max_distance=400,
+            parent=self,
+            x_velocity=(10 + self.move_acceleration) * self.direction,
             y_velocity=0,
             image_path="images/attacks/shoot0.png",
             x=self.x,
@@ -88,8 +90,6 @@ class Player(Sprite):
             direction=self.direction,
             collidable=False,
         )
-        while self.collides_with(bullet):
-            bullet.x_move(bullet.direction)
 
     def on_hit(self, attack: attacks.Attack):
         self.health -= attack.damage
