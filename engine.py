@@ -255,6 +255,7 @@ class Button(Sprite):
         super().__init__(game, image_path, x=x, y=y, collidable=False)
         self.menu = menu
         self.func = func
+        self.click_flag = 0
         self.image2 = pygame.transform.scale(
             self.image1,
             (
@@ -268,6 +269,11 @@ class Button(Sprite):
         if self.rect.collidepoint(pygame.mouse.get_pos()):
             self.direction = -1
             if pygame.mouse.get_pressed()[0]:
+                self.click_flag = 1
+            elif self.click_flag == 1:
+                self.click_flag = 2
+            if self.click_flag == 2:
+                self.click_flag = 0
                 self.func(self.menu)
         else:
             self.direction = 1

@@ -33,15 +33,6 @@ class StartMenu(engine.Menu):
     def start(self):
         self.game.running = False
         server = network.Server()
-        server.game.add_object(
-            "level",
-            Level.load,
-            pos_filepath="level.csv",
-            image_filepath="images/level/{}.png",
-            y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {1080: -440}}},
-        )
-        server.add_player(0, "images/player1.png")
         with server:
             server.main()
 

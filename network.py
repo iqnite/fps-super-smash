@@ -6,15 +6,19 @@ from types import SimpleNamespace
 
 import psutil
 import engine
+from level import Level
 from player import Player, get_controls
 
 PORT = 65432
 
 
+OK = b"OK"
+UNKNOWN = b"unknown"
 ECHO = b"echo"
 JOIN_GAME = b"join_game:"
 GET_FRAME = b"get_frame"
 SEND_CONTROLS = b"controls:"
+WAITING = b"waiting"
 
 
 def get_wlan_ip():
@@ -39,6 +43,7 @@ class Server:
         self.accepts_new_clients: bool = False
         self.selector = selectors.DefaultSelector()
         self.game: engine.Game = engine.Game((0, 0))
+        self.waiting: bool = True
 
     def __enter__(self):
         self.start_server()
@@ -64,6 +69,7 @@ class Server:
     def main(self):
         self.event_thread = threading.Thread(target=self.event_loop)
         self.event_thread.start()
+        self.game.add_object("lobby", ServerLobbyMenu, server=self)
         self.game.main(self.game_loop)
 
     def event_loop(self):
@@ -99,12 +105,15 @@ class Server:
                 data.outb += recv_data
             elif recv_data.startswith(JOIN_GAME):
                 self.add_player(data.addr, recv_data[len(JOIN_GAME) :].decode())
-                data.outb += b"OK"
+                data.outb += OK
             elif recv_data == GET_FRAME:
-                data.outb += self.serialize_game().encode()
+                if self.waiting:
+                    data.outb += WAITING
+                else:
+                    data.outb += self.serialize_game().encode()
             elif recv_data.startswith(SEND_CONTROLS):
                 self.apply_controls(data.addr, recv_data[len(SEND_CONTROLS) :])
-                data.outb += b"OK"
+                data.outb += OK
             elif not recv_data:
                 self.connections.remove(sock)
                 del self.players[f"player{data.addr}"]
@@ -112,7 +121,7 @@ class Server:
                 sock.close()
                 print("Closed connection to", data.addr)
             else:
-                data.outb += b"Unknown command"
+                data.outb += UNKNOWN
         if mask & selectors.EVENT_WRITE:
             if data.outb:
                 sent = sock.send(data.outb)  # Should be ready to write
@@ -131,9 +140,11 @@ class Server:
                 for i, sprite in enumerate(getattr(obj, "sprites", [obj]))
             }
         )
-    
+
     def game_loop(self):
         self.game.screen.fill("black")
+        if self.waiting:
+            return
         self.players["player0"].keyboard_control()
 
     def apply_controls(self, client, data: bytes):
@@ -193,3 +204,30 @@ class Client:
         for name, object in json.loads(next_draw).items():
             self.game.add_object(name, engine.Sprite, **object)
         self.request(SEND_CONTROLS + json.dumps(get_controls()).encode())
+
+
+class ServerLobbyMenu(engine.Menu):
+    button_distance = 100
+
+    def __init__(self, *args, server: Server, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.server = server
+
+    @engine.button("images/Menu/Start.png")
+    def start(self):
+        self.loop = lambda: None
+        self.server.waiting = False
+        self.server.accepts_new_clients = False
+        self.server.game.add_object(
+            "level",
+            Level.load,
+            pos_filepath="level.csv",
+            image_filepath="images/level/{}.png",
+            y_velocity=1,
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
+        )
+        self.server.add_player(0, "images/player1.png")
+
+    @engine.button("images/Menu/Cancel.png")
+    def exit(self):
+        self.game.running = False
