@@ -172,6 +172,7 @@ class Client:
 
     def connect(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.settimeout(5)
         self.client.connect((self.server_host, self.server_port))
 
     def disconnect(self):

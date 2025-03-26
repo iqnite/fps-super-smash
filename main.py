@@ -12,9 +12,14 @@ class StartMenu(engine.Menu):
         client = network.Client(ip, network.PORT)
         try:
             with client:
-                print(client.request(network.ECHO).decode())
                 client.request(network.JOIN_GAME + f"images/player{0}.png".encode())
                 client.main()
+        except TimeoutError:
+            print("Connection timed out.")
+            quit()
+        except ConnectionAbortedError:
+            print("Connection aborted by server.")
+            quit()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
             quit()
@@ -35,7 +40,6 @@ class StartMenu(engine.Menu):
             common_sprite_args={"teleport": {"+y": {720: 200}}},
         )
         server.add_player(0, "images/player1.png")
-
         with server:
             server.main()
 
