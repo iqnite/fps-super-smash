@@ -1,4 +1,4 @@
-# Meltown Smash by FPS Studios
+# Meltdown Smash by FPS Studios
 
 ![FPS Logo](images/fps-logo.svg)
 

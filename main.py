@@ -5,6 +5,8 @@ from level import Level
 
 
 class StartMenu(engine.Menu):
+    button_distance = 100
+
     @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
@@ -37,7 +39,7 @@ class StartMenu(engine.Menu):
             pos_filepath="level.csv",
             image_filepath="images/level/{}.png",
             y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {720: 200}}},
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
         )
         server.add_player(0, "images/player1.png")
         with server:
@@ -51,6 +53,5 @@ class StartMenu(engine.Menu):
 game = engine.Game((0, 0))
 bg_image = pygame.image.load("images/Menu/Background.png")
 bg_image = pygame.transform.scale(bg_image, (game.width, game.height))
-game.screen.blit(bg_image, (0, 0))
-game.add_object("StartMenu", StartMenu, button_distance=100)
-game.main()
+game.add_object("StartMenu", StartMenu)
+game.main(lambda: game.screen.blit(bg_image, (0, 0)))
