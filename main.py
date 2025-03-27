@@ -1,7 +1,6 @@
 import pygame
 import engine
 import network
-from level import Level
 
 
 class StartMenu(engine.Menu):
@@ -14,7 +13,6 @@ class StartMenu(engine.Menu):
         client = network.Client(ip, network.PORT)
         try:
             with client:
-                client.request(network.JOIN_GAME + f"images/player{0}.png".encode())
                 client.main()
         except TimeoutError:
             print("Connection timed out.")
