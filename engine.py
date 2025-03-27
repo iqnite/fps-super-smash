@@ -2,13 +2,18 @@ import pygame
 
 
 class Game:
-    def __init__(self, screen_size):
+    def __init__(self, screen_size, background_image_path=None):
         pygame.init()
         self.screen = pygame.display.set_mode(screen_size)
         self.objects = {}
         self.clock = pygame.time.Clock()
         self.running = True
         self.dt = 0
+        self.background = None
+        if background_image_path:
+            self.background = pygame.image.load(background_image_path)
+            self.background = pygame.transform.scale(self.background, (self.width, self.height))
+
 
     def main(self, func=None):
         while self.running:
@@ -22,6 +27,10 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
         try:
+            if self.background:
+                self.screen.blit(self.background, (0, 0))
+            else:
+                self.screen.fill("black")
             if func:
                 func()
             for obj in list(self.objects.values()).copy():

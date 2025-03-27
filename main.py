@@ -39,8 +39,6 @@ class StartMenu(engine.Menu):
         self.game.running = False
 
 
-game = engine.Game((0, 0))
-bg_image = pygame.image.load("images/Menu/Background.png")
-bg_image = pygame.transform.scale(bg_image, (game.width, game.height))
+game = engine.Game((0, 0), "images/Menu/Background.png")
 game.add_object("StartMenu", StartMenu)
-game.main(lambda: game.screen.blit(bg_image, (0, 0)))
+game.main()

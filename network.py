@@ -43,7 +43,7 @@ class Server:
         self.connections: list[socket.socket] = []
         self.online: bool = False
         self.selector = selectors.DefaultSelector()
-        self.game: engine.Game = engine.Game((0, 0))
+        self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
         self.waiting: bool = True
 
     def __enter__(self):
@@ -148,7 +148,6 @@ class Server:
         )
 
     def game_loop(self):
-        self.game.screen.fill("black")
         if self.waiting:
             return
         if (server_player := self.players["server"]) is not None:
@@ -164,7 +163,7 @@ class Client:
         self.server_host = server_host
         self.server_port = server_port
         self.client: socket.socket
-        self.game: engine.Game = engine.Game((0, 0))
+        self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
 
     def __enter__(self):
         self.connect()
@@ -193,18 +192,15 @@ class Client:
         ):
             print("Game already started, please wait for the server to finish.")
             return
-        waiting_text = pygame.font.Font(None, 74).render(
-            "Waiting for players...", True, "white"
-        )
-        bg_image = pygame.image.load("images/Menu/Background.png")
-        bg_image = pygame.transform.scale(bg_image, (self.game.width, self.game.height))
-        self.game.screen.blit(bg_image, (0, 0))
-        self.game.screen.blit(waiting_text, (self.game.width / 2, self.game.height / 2))
         self.game.main(self.sync)
 
     def sync(self):
         next_draw = self.request(GET_FRAME)
         if next_draw == WAITING:
+            waiting_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+                "Waiting for players...", True, "white"
+            )
+            self.game.screen.blit(waiting_text, (100, self.game.height / 2))
             return
         self.game.screen.fill("black")
         self.game.objects.clear()
@@ -243,6 +239,7 @@ class ServerLobbyMenu(engine.Menu):
                 jump_acceleration=24,
                 gravity=2,
             )
+        self.game.background = None
         self.server.waiting = False
 
     @engine.button("images/Menu/Cancel.png")
