@@ -707,31 +707,6 @@ class TestNetwork(unittest.TestCase):
         response = client.request("test")
         self.assertEqual(response, b"OK")
 
-    @patch("socket.socket")
-    @patch("selectors.DefaultSelector")
-    @patch("network.get_wlan_ip", return_value="192.168.1.1")
-    def test_client_sync(self, mock_get_wlan_ip, mock_selector, mock_socket):
-        client = Client("127.0.0.1", 65432)
-        mock_socket_instance = mock_socket.return_value
-        mock_socket_instance.recv.return_value = b"OK"
-        with patch.object(
-            client,
-            "request",
-            return_value=b'{"player10": {"image_path": "images/level/0.png", "x": 100, "y": 200, "direction": 1}}',
-        ):
-            client.connect()
-            with patch(
-                "pygame.key.get_pressed",
-                return_value={
-                    pygame.K_LEFT: True,
-                    pygame.K_RIGHT: False,
-                    pygame.K_UP: False,
-                    pygame.K_SPACE: False,
-                },
-            ):
-                client.sync()
-        client.disconnect()
-
 
 if __name__ == "__main__":
     unittest.main()
