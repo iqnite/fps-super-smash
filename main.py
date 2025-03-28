@@ -10,32 +10,28 @@ class StartMenu(engine.Menu):
     @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
-        ip = pygame_textinput.TextInputVisualizer()
+        ip_input = pygame_textinput.TextInputVisualizer()
 
         screen = pygame.display.set_mode((500, 100))
         clock = pygame.time.Clock()
 
-        while True:
+        wating = True
+        while wating:
             screen.fill((225, 225, 225))
 
             events = pygame.event.get()
-
-            # Feed it with events every frame
-            ip.update(events)
-            # Blit its surface onto the screen
-            screen.blit(ip.surface, (10, 10))
+            ip_input.update(events)  # type: ignore
+            screen.blit(ip_input.surface, (10, 10))
 
             for event in events:
                 if event.type == pygame.QUIT:
-                    exit()
-                if not(event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
-                    break
-            else:
-                break
+                    quit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    wating = False
 
             pygame.display.update()
             clock.tick(30)
-        client = network.Client(ip.value, network.PORT)
+        client = network.Client(ip_input.value, network.PORT)
         try:
             with client:
                 client.main()
@@ -50,6 +46,9 @@ class StartMenu(engine.Menu):
             quit()
         except ConnectionResetError:
             print("Connection reset by server.")
+            quit()
+        except ValueError:
+            print("Invalid IP address.")
             quit()
 
     @engine.button("images/Menu/Start.png")
