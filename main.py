@@ -1,4 +1,5 @@
 import pygame
+import pygame_textinput
 import engine
 import network
 
@@ -9,8 +10,32 @@ class StartMenu(engine.Menu):
     @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
-        ip = input("Enter IP Address: ")
-        client = network.Client(ip, network.PORT)
+        ip = pygame_textinput.TextInputVisualizer()
+
+        screen = pygame.display.set_mode((500, 100))
+        clock = pygame.time.Clock()
+
+        while True:
+            screen.fill((225, 225, 225))
+
+            events = pygame.event.get()
+
+            # Feed it with events every frame
+            ip.update(events)
+            # Blit its surface onto the screen
+            screen.blit(ip.surface, (10, 10))
+
+            for event in events:
+                if event.type == pygame.QUIT:
+                    exit()
+                if not(event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                    break
+            else:
+                break
+
+            pygame.display.update()
+            clock.tick(30)
+        client = network.Client(ip.value, network.PORT)
         try:
             with client:
                 client.main()
