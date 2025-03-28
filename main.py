@@ -1,4 +1,3 @@
-import pygame
 import engine
 import network
 
