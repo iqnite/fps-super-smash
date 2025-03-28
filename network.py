@@ -151,7 +151,7 @@ class Server:
     def game_loop(self):
         if self.waiting:
             ip_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
-                f"IP Address: {self.server.getsockname()}", True, "white"
+                f"IP Address: {self.server.getsockname()[0]}", True, "white"
             )
             self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
