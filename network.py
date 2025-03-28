@@ -134,21 +134,23 @@ class Server:
                 data.outb = data.outb[sent:]
 
     def serialize_game(self):
-        return json.dumps(
-            {
-                f"{name}{i}": {
-                    "image_path": sprite.image_path,
-                    "x": sprite.x,
-                    "y": sprite.y,
-                    "direction": sprite.direction,
-                }
-                for name, obj in self.game.objects.items()
-                for i, sprite in enumerate(getattr(obj, "sprites", [obj]))
+        return json.dumps({
+            f"{n}{i}": {
+                "i": s.image_path,
+                "x": round(s.x),
+                "y": round(s.y),
+                "d": s.direction
             }
-        )
+            for n, o in self.game.objects.items()
+            for i, s in enumerate(getattr(o, "sprites", [o]))
+        }, separators=(',', ':'))
 
     def game_loop(self):
         if self.waiting:
+            ip_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+                f"IP Address: {self.server.getsockname()}", True, "white"
+            )
+            self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
         if (server_player := self.players["server"]) is not None:
             server_player.keyboard_control()
