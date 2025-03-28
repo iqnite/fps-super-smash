@@ -136,10 +136,10 @@ class Server:
     def serialize_game(self):
         return json.dumps({
             f"{n}{i}": {
-                "i": s.image_path,
+                "image_path": s.image_path,
                 "x": round(s.x),
                 "y": round(s.y),
-                "d": s.direction
+                "direction": s.direction
             }
             for n, o in self.game.objects.items()
             for i, s in enumerate(getattr(o, "sprites", [o]))
@@ -184,7 +184,7 @@ class Client:
 
     def request(self, data: str | bytes):
         self.client.sendall(data.encode() if isinstance(data, str) else data)
-        data = self.client.recv(4096)
+        data = self.client.recv(8138)
         return data
 
     def main(self):
@@ -194,7 +194,9 @@ class Client:
         ):
             print("Game already started, please wait for the server to finish.")
             return
-        self.game.main(self.sync)
+        self.sync_thread = threading.Thread(target=self.sync)
+        self.sync_thread.start()
+        self.game.main()
 
     def sync(self):
         next_draw = self.request(GET_FRAME)
