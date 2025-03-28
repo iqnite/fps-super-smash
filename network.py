@@ -134,16 +134,19 @@ class Server:
                 data.outb = data.outb[sent:]
 
     def serialize_game(self):
-        return json.dumps({
-            f"{n}{i}": {
-                "image_path": s.image_path,
-                "x": round(s.x),
-                "y": round(s.y),
-                "direction": s.direction
-            }
-            for n, o in self.game.objects.items()
-            for i, s in enumerate(getattr(o, "sprites", [o]))
-        }, separators=(',', ':'))
+        return json.dumps(
+            {
+                f"{n}{i}": {
+                    "image_path": s.image_path,
+                    "x": round(s.x),
+                    "y": round(s.y),
+                    "direction": s.direction,
+                }
+                for n, o in self.game.objects.items()
+                for i, s in enumerate(getattr(o, "sprites", [o]))
+            },
+            separators=(",", ":"),
+        )
 
     def game_loop(self):
         if self.waiting:
@@ -194,23 +197,31 @@ class Client:
         ):
             print("Game already started, please wait for the server to finish.")
             return
+        self.next_draw = None
+        self.controls = None
         self.sync_thread = threading.Thread(target=self.sync)
         self.sync_thread.start()
-        self.game.main()
+        self.game.main(self.game_loop)
 
     def sync(self):
-        next_draw = self.request(GET_FRAME)
-        if next_draw == WAITING:
+        while self.game.running:
+            self.next_draw = self.request(GET_FRAME)
+            if self.controls is not None:
+                self.request(SEND_CONTROLS + self.controls)
+
+    def game_loop(self):
+        if self.next_draw == WAITING:
             waiting_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
                 "Waiting for players...", True, "white"
             )
             self.game.screen.blit(waiting_text, (100, self.game.height / 2))
             return
-        self.game.screen.fill("black")
-        self.game.objects.clear()
-        for name, object in json.loads(next_draw.decode()).items():
-            self.game.add_object(name, engine.Sprite, **object)
-        self.request(SEND_CONTROLS + json.dumps(get_controls()).encode())
+        self.controls = json.dumps(get_controls()).encode()
+        if self.next_draw is not None:
+            self.game.screen.fill("black")
+            self.game.objects.clear()
+            for name, object in json.loads(self.next_draw.decode()).items():
+                self.game.add_object(name, engine.Sprite, **object)
 
 
 class ServerLobbyMenu(engine.Menu):
