@@ -5,16 +5,22 @@ import threading
 from types import SimpleNamespace
 
 import psutil
+import pygame
 import engine
+from level import Level
 from player import Player, get_controls
 
 PORT = 65432
 
 
+OK = b"OK"
+UNKNOWN = b"unknown"
 ECHO = b"echo"
 JOIN_GAME = b"join_game:"
 GET_FRAME = b"get_frame"
 SEND_CONTROLS = b"controls:"
+WAITING = b"waiting"
+GAME_ALREADY_STARTED = b"game_already_started"
 
 
 def get_wlan_ip():
@@ -33,12 +39,12 @@ def get_wlan_ip():
 class Server:
     def __init__(self):
         self.server: socket.socket
-        self.players: dict[str, Player] = {}
+        self.players: dict[str, Player | None] = {"server": None}
         self.connections: list[socket.socket] = []
         self.online: bool = False
-        self.accepts_new_clients: bool = False
         self.selector = selectors.DefaultSelector()
-        self.game: engine.Game = engine.Game((0, 0))
+        self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
+        self.waiting: bool = True
 
     def __enter__(self):
         self.start_server()
@@ -60,10 +66,12 @@ class Server:
         self.online = False
         self.server.close()
         self.selector.close()
+        print("Server stopped.")
 
     def main(self):
         self.event_thread = threading.Thread(target=self.event_loop)
         self.event_thread.start()
+        self.game.add_object("lobby", ServerLobbyMenu, server=self)
         self.game.main(self.game_loop)
 
     def event_loop(self):
@@ -98,21 +106,28 @@ class Server:
             if recv_data == ECHO:
                 data.outb += recv_data
             elif recv_data.startswith(JOIN_GAME):
-                self.add_player(data.addr, recv_data[len(JOIN_GAME) :].decode())
-                data.outb += b"OK"
+                if self.waiting:
+                    self.players[data.addr] = None
+                    data.outb += OK
+                else:
+                    data.outb += GAME_ALREADY_STARTED
             elif recv_data == GET_FRAME:
-                data.outb += self.serialize_game().encode()
+                if self.waiting:
+                    data.outb += WAITING
+                else:
+                    data.outb += self.serialize_game().encode()
             elif recv_data.startswith(SEND_CONTROLS):
                 self.apply_controls(data.addr, recv_data[len(SEND_CONTROLS) :])
-                data.outb += b"OK"
+                data.outb += OK
             elif not recv_data:
+                if data.addr in self.players:
+                    del self.players[data.addr]
                 self.connections.remove(sock)
-                del self.players[f"player{data.addr}"]
                 self.selector.unregister(sock)
                 sock.close()
                 print("Closed connection to", data.addr)
             else:
-                data.outb += b"Unknown command"
+                data.outb += UNKNOWN
         if mask & selectors.EVENT_WRITE:
             if data.outb:
                 sent = sock.send(data.outb)  # Should be ready to write
@@ -121,39 +136,31 @@ class Server:
     def serialize_game(self):
         return json.dumps(
             {
-                f"{name}{i}": {
-                    "image_path": sprite.image_path,
-                    "x": sprite.x,
-                    "y": sprite.y,
-                    "direction": sprite.direction,
+                f"{n}{i}": {
+                    "image_path": s.image_path,
+                    "x": round(s.x),
+                    "y": round(s.y),
+                    "direction": s.direction,
                 }
-                for name, obj in self.game.objects.items()
-                for i, sprite in enumerate(getattr(obj, "sprites", [obj]))
-            }
+                for n, o in self.game.objects.items()
+                for i, s in enumerate(getattr(o, "sprites", [o]))
+            },
+            separators=(",", ":"),
         )
-    
+
     def game_loop(self):
-        self.game.screen.fill("black")
-        self.players["player0"].keyboard_control()
+        if self.waiting:
+            ip_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+                f"IP Address: {self.server.getsockname()}", True, "white"
+            )
+            self.game.screen.blit(ip_text, (100, self.game.height / 2))
+            return
+        if (server_player := self.players["server"]) is not None:
+            server_player.keyboard_control()
 
     def apply_controls(self, client, data: bytes):
-        self.players[f"player{client}"].controls = json.loads(data)
-
-    def add_player(self, client, image_path):
-        player_str = f"player{client}"
-        player = self.game.add_object(
-            player_str,
-            Player,
-            image_path=image_path,
-            x=self.game.width / 2 + 100,
-            y=200,
-            move_acceleration=4,
-            friction=0.25,
-            jump_acceleration=24,
-            gravity=2,
-        )
-        self.players[player_str] = player
-        return player
+        if (player := self.players[client]) is not None:
+            player.controls = json.loads(data)
 
 
 class Client:
@@ -161,7 +168,7 @@ class Client:
         self.server_host = server_host
         self.server_port = server_port
         self.client: socket.socket
-        self.game: engine.Game = engine.Game((0, 0))
+        self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
 
     def __enter__(self):
         self.connect()
@@ -172,6 +179,7 @@ class Client:
 
     def connect(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.settimeout(5)
         self.client.connect((self.server_host, self.server_port))
 
     def disconnect(self):
@@ -179,16 +187,76 @@ class Client:
 
     def request(self, data: str | bytes):
         self.client.sendall(data.encode() if isinstance(data, str) else data)
-        data = self.client.recv(4096)
+        data = self.client.recv(8138)
         return data
 
     def main(self):
-        self.game.main(self.sync)
+        if (
+            self.request(JOIN_GAME + f"images/player{0}.png".encode())
+            == GAME_ALREADY_STARTED
+        ):
+            print("Game already started, please wait for the server to finish.")
+            return
+        self.next_draw = None
+        self.controls = None
+        self.sync_thread = threading.Thread(target=self.sync)
+        self.sync_thread.start()
+        self.game.main(self.game_loop)
 
     def sync(self):
-        next_draw = self.request(GET_FRAME).decode()
-        self.game.screen.fill("black")
-        self.game.objects.clear()
-        for name, object in json.loads(next_draw).items():
-            self.game.add_object(name, engine.Sprite, **object)
-        self.request(SEND_CONTROLS + json.dumps(get_controls()).encode())
+        while self.game.running:
+            self.next_draw = self.request(GET_FRAME)
+            if self.controls is not None:
+                self.request(SEND_CONTROLS + self.controls)
+
+    def game_loop(self):
+        if self.next_draw == WAITING:
+            waiting_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+                "Waiting for players...", True, "white"
+            )
+            self.game.screen.blit(waiting_text, (100, self.game.height / 2))
+            return
+        self.controls = json.dumps(get_controls()).encode()
+        if self.next_draw is not None:
+            self.game.screen.fill("black")
+            self.game.objects.clear()
+            for name, object in json.loads(self.next_draw.decode()).items():
+                self.game.add_object(name, engine.Sprite, **object)
+
+
+class ServerLobbyMenu(engine.Menu):
+    button_distance = 100
+
+    def __init__(self, *args, server: Server, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.server = server
+
+    @engine.button("images/Menu/Start.png")
+    def start(self):
+        self.game.remove_object(self)
+        self.game.add_object(
+            "level",
+            Level.load,
+            pos_filepath="level.csv",
+            image_filepath="images/level/{}.png",
+            y_velocity=1,
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
+        )
+        for i, id in enumerate(self.server.players):
+            self.server.players[id] = self.game.add_object(
+                f"player{i}",
+                Player,
+                image_path=f"images/player{i % 2}.png",
+                x=self.game.width / 2 + 100 * int(i),
+                y=200,
+                move_acceleration=4,
+                friction=0.25,
+                jump_acceleration=24,
+                gravity=2,
+            )
+        self.game.background = None
+        self.server.waiting = False
+
+    @engine.button("images/Menu/Cancel.png")
+    def exit(self):
+        self.game.running = False

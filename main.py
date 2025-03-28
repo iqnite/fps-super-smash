@@ -1,41 +1,74 @@
 import pygame
+import pygame_textinput
 import engine
 import network
-from level import Level
 
 
 class StartMenu(engine.Menu):
+    button_distance = 100
+
     @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
-        ip = input("Enter IP Address: ")
-        client = network.Client(ip, network.PORT)
+        font = pygame.font.Font("images/Anta-Regular.ttf", 30)
+        enter_text = font.render(
+            "Enter the server IP address and press Enter to connect.", True, "white"
+        )
+        ip_input = pygame_textinput.TextInputVisualizer(
+            font_color="white",
+            font_object=font,
+            cursor_color="white",
+        )
+
+        screen = pygame.display.set_mode((0, 0))
+        clock = pygame.time.Clock()
+
+        wating = True
+        while wating:
+            if self.game.background:
+                screen.blit(self.game.background, (0, 0))
+            else:
+                screen.fill("black")
+
+            events = pygame.event.get()
+            ip_input.update(events)  # type: ignore
+            screen.blit(enter_text, (10, screen.get_height() / 2 - 50))
+            screen.blit(ip_input.surface, (10, screen.get_height() / 2))
+
+            for event in events:
+                if event.type == pygame.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+                ):
+                    quit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    wating = False
+
+            pygame.display.update()
+            clock.tick(30)
+        client = network.Client(ip_input.value, network.PORT)
         try:
             with client:
-                print(client.request(network.ECHO).decode())
-                client.request(network.JOIN_GAME + f"images/player{0}.png".encode())
                 client.main()
+        except TimeoutError:
+            print("Connection timed out.")
+            quit()
+        except ConnectionAbortedError:
+            print("Connection aborted by server.")
+            quit()
         except ConnectionRefusedError:
             print("Could not connect: Server is not running.")
             quit()
         except ConnectionResetError:
             print("Connection reset by server.")
             quit()
+        except ValueError:
+            print("Invalid IP address.")
+            quit()
 
     @engine.button("images/Menu/Start.png")
     def start(self):
         self.game.running = False
         server = network.Server()
-        server.game.add_object(
-            "level",
-            Level.load,
-            pos_filepath="level.csv",
-            image_filepath="images/level/{}.png",
-            y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {720: 200}}},
-        )
-        server.add_player(0, "images/player1.png")
-
         with server:
             server.main()
 
@@ -44,9 +77,6 @@ class StartMenu(engine.Menu):
         self.game.running = False
 
 
-game = engine.Game((0, 0))
-bg_image = pygame.image.load("images/Menu/Background.png")
-bg_image = pygame.transform.scale(bg_image, (game.width, game.height))
-game.screen.blit(bg_image, (0, 0))
-game.add_object("StartMenu", StartMenu, button_distance=100)
+game = engine.Game((0, 0), "images/Menu/Background.png")
+game.add_object("StartMenu", StartMenu)
 game.main()

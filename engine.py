@@ -2,13 +2,18 @@ import pygame
 
 
 class Game:
-    def __init__(self, screen_size):
+    def __init__(self, screen_size, background_image_path=None):
         pygame.init()
         self.screen = pygame.display.set_mode(screen_size)
         self.objects = {}
         self.clock = pygame.time.Clock()
         self.running = True
         self.dt = 0
+        self.background = None
+        if background_image_path:
+            self.background = pygame.image.load(background_image_path)
+            self.background = pygame.transform.scale(self.background, (self.width, self.height))
+
 
     def main(self, func=None):
         while self.running:
@@ -22,6 +27,10 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
         try:
+            if self.background:
+                self.screen.blit(self.background, (0, 0))
+            else:
+                self.screen.fill("black")
             if func:
                 func()
             for obj in list(self.objects.values()).copy():
@@ -73,9 +82,9 @@ class Sprite:
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.default_image = pygame.image.load(image_path)
-        self.flipped_image = pygame.transform.flip(self.default_image, True, False)
-        self.image = self.default_image
+        self.image1 = pygame.image.load(image_path)
+        self.image2 = pygame.transform.flip(self.image1, True, False)
+        self.image = self.image1
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
@@ -171,7 +180,7 @@ class Sprite:
                         self.y = b
 
     def draw(self):
-        self.image = self.default_image if self.direction == 1 else self.flipped_image
+        self.image = self.image1 if self.direction == 1 else self.image2
         self.game.screen.blit(self.image, (self.x, self.y))
 
 
@@ -220,7 +229,13 @@ class MultiSprite:
 
 
 class Menu:
-    def __init__(self, game: Game, button_distance: int):
+    button_distance: int = 100
+
+    def __init__(self, game: Game, x=None, y=None):
+        if x is None:
+            x = game.width / 2
+        if y is None:
+            y = game.height / 2 - 100
         self.game = game
         self.buttons = [
             func._engine_type_(
@@ -228,12 +243,12 @@ class Menu:
                 func=func,
                 game=game,
                 menu=self,
-                x=game.width / 2
+                x=x
                 - pygame.image.load(
                     getattr(self, name)._engine_kwargs_["image_path"]
                 ).get_width()
                 / 2,
-                y=game.height / 2 - 100 + i * button_distance
+                y=y + i * self.button_distance
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")
@@ -249,12 +264,28 @@ class Button(Sprite):
         super().__init__(game, image_path, x=x, y=y, collidable=False)
         self.menu = menu
         self.func = func
+        self.click_flag = 0
+        self.image2 = pygame.transform.scale(
+            self.image1,
+            (
+                self.image1.get_width() * 1.3,
+                self.image1.get_height() * 1.3,
+            ),
+        )
 
     def loop(self):
         super().loop()
         if self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.direction = -1
             if pygame.mouse.get_pressed()[0]:
+                self.click_flag = 1
+            elif self.click_flag == 1:
+                self.click_flag = 2
+            if self.click_flag == 2:
+                self.click_flag = 0
                 self.func(self.menu)
+        else:
+            self.direction = 1
 
 
 def button(image_path: str):
