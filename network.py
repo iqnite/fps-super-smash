@@ -1,8 +1,9 @@
 import socket
-import selectors
 import json
 import threading
-from types import SimpleNamespace
+import time
+import pickle  # For binary serialization
+import zlib  # For compression
 
 import psutil
 import pygame
@@ -12,7 +13,7 @@ from player import Player, get_controls
 
 PORT = 65432
 
-
+# Protocol constants
 OK = b"OK"
 UNKNOWN = b"unknown"
 ECHO = b"echo"
@@ -22,9 +23,15 @@ SEND_CONTROLS = b"controls:"
 WAITING = b"waiting"
 GAME_ALREADY_STARTED = b"game_already_started"
 
+# UDP specific constants
+BUFFER_SIZE = 65507  # Max UDP packet size
+BROADCAST_INTERVAL = 1 / 60  # 60fps broadcast rate for smoother updates
+MAX_PACKET_AGE = 1.0  # Discard packets older than this
+USE_BINARY_PROTOCOL = True  # Use more efficient binary serialization
+USE_COMPRESSION = True  # Compress network data
+
 
 def get_wlan_ip():
-    # Credit to Paul
     for interface, addrs in psutil.net_if_addrs().items():
         if any(
             name in interface
@@ -39,12 +46,14 @@ def get_wlan_ip():
 class Server:
     def __init__(self):
         self.server: socket.socket
-        self.players: dict[str, Player | None] = {"server": None}
-        self.connections: list[socket.socket] = []
+        self.players: dict[tuple, Player | None] = {}
+        self.client_addresses = []
         self.online: bool = False
-        self.selector = selectors.DefaultSelector()
         self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
         self.waiting: bool = True
+        self.last_broadcast = 0
+        self.sequence_number = 0
+        self.last_game_state = {}  # Store previous state for delta comparison
 
     def __enter__(self):
         self.start_server()
@@ -54,99 +63,121 @@ class Server:
         self.stop_server()
 
     def start_server(self):
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.bind((get_wlan_ip(), PORT))
-        self.server.listen()
-        self.server.setblocking(False)
-        self.selector.register(self.server, selectors.EVENT_READ, data=None)
         self.online = True
-        print("Server started on", self.server.getsockname())
+        print("UDP Server started on", self.server.getsockname())
 
     def stop_server(self):
         self.online = False
         self.server.close()
-        self.selector.close()
         print("Server stopped.")
 
     def main(self):
         self.event_thread = threading.Thread(target=self.event_loop)
         self.event_thread.start()
         self.game.add_object("lobby", ServerLobbyMenu, server=self)
+        self.players[self.server.getsockname()] = None
         self.game.main(self.game_loop)
 
     def event_loop(self):
+        self.server.setblocking(False)
         while self.online:
-            events = self.selector.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    self.accept_wrapper(key.fileobj)
-                else:
-                    self.service_connection(key, mask)
-
-    def accept_wrapper(self, sock):
-        try:
-            connection, address = sock.accept()
-        except OSError:
-            return
-        print("Accepted connection from", address)
-        connection.setblocking(False)
-        data = SimpleNamespace(addr=address, inb=b"", outb=b"")
-        self.connections.append(connection)
-        events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        self.selector.register(connection, events, data=data)
-
-    def service_connection(self, key, mask):
-        sock: socket.socket = key.fileobj
-        data = key.data
-        if mask & selectors.EVENT_READ:
+            # Handle incoming messages
             try:
-                recv_data = sock.recv(1024)  # Should be ready to read
-            except ConnectionResetError:
-                recv_data = b""
-            if recv_data == ECHO:
-                data.outb += recv_data
-            elif recv_data.startswith(JOIN_GAME):
-                if self.waiting:
-                    self.players[data.addr] = None
-                    data.outb += OK
-                else:
-                    data.outb += GAME_ALREADY_STARTED
-            elif recv_data == GET_FRAME:
-                if self.waiting:
-                    data.outb += WAITING
-                else:
-                    data.outb += self.serialize_game().encode()
-            elif recv_data.startswith(SEND_CONTROLS):
-                self.apply_controls(data.addr, recv_data[len(SEND_CONTROLS) :])
-                data.outb += OK
-            elif not recv_data:
-                if data.addr in self.players:
-                    del self.players[data.addr]
-                self.connections.remove(sock)
-                self.selector.unregister(sock)
-                sock.close()
-                print("Closed connection to", data.addr)
+                self.process_incoming_messages()
+            except (BlockingIOError, ConnectionResetError):
+                pass
+
+            # Broadcast game state periodically
+            current_time = time.time()
+            if (
+                current_time - self.last_broadcast > BROADCAST_INTERVAL
+                and not self.waiting
+                and self.client_addresses  # Only broadcast if clients are connected
+            ):
+                self.broadcast_game_state()
+                self.last_broadcast = current_time
+
+            # Shorter sleep for more responsive server
+            time.sleep(0.0005)
+
+    def process_incoming_messages(self):
+        data, client_address = self.server.recvfrom(BUFFER_SIZE)
+
+        if data.startswith(JOIN_GAME):
+            if self.waiting:
+                if client_address not in self.client_addresses:
+                    self.client_addresses.append(client_address)
+                self.players[client_address] = None
+                self.server.sendto(OK, client_address)
             else:
-                data.outb += UNKNOWN
-        if mask & selectors.EVENT_WRITE:
-            if data.outb:
-                sent = sock.send(data.outb)  # Should be ready to write
-                data.outb = data.outb[sent:]
+                self.server.sendto(GAME_ALREADY_STARTED, client_address)
+
+        elif data.startswith(SEND_CONTROLS):
+            self.apply_controls(client_address, data[len(SEND_CONTROLS) :])
+            # No need to send OK for UDP
+
+        elif data == GET_FRAME:
+            # Legacy support for clients polling for game state
+            if self.waiting:
+                self.server.sendto(WAITING, client_address)
+            else:
+                self.server.sendto(self.serialize_game(), client_address)
+
+        elif data == ECHO:
+            self.server.sendto(data, client_address)
+
+        else:
+            self.server.sendto(UNKNOWN, client_address)
+
+    def broadcast_game_state(self):
+        """Send game state to all connected clients"""
+        game_state = self.serialize_game()
+        self.sequence_number += 1
+
+        if USE_BINARY_PROTOCOL:
+            # Binary format: (b'SEQ', sequence_number, game_state_bytes)
+            data = pickle.dumps(("SEQ", self.sequence_number, game_state))
+            if USE_COMPRESSION:
+                data = zlib.compress(data, level=1)  # Use fast compression (level 1)
+        else:
+            # Legacy text format
+            seq_header = f"seq:{self.sequence_number}:".encode()
+            data = (
+                seq_header + game_state.encode()
+                if isinstance(game_state, str)
+                else seq_header + game_state
+            )
+
+        # Send to all clients with error handling
+        for client_address in self.client_addresses[
+            :
+        ]:  # Copy list to allow modification during iteration
+            try:
+                self.server.sendto(data, client_address)
+            except Exception as e:
+                print(f"Error sending to {client_address}: {e}")
 
     def serialize_game(self):
-        return json.dumps(
-            {
-                f"{n}{i}": {
-                    "image_path": s.image_path,
-                    "x": round(s.x),
-                    "y": round(s.y),
-                    "direction": s.direction,
-                }
-                for n, o in self.game.objects.items()
-                for i, s in enumerate(getattr(o, "sprites", [o]))
-            },
-            separators=(",", ":"),
-        )
+        """Create a compact representation of the game state"""
+        # Collect current game state
+        current_state = {
+            f"{n}{i}": {
+                "p": s.image_path,  # Shorter key names to reduce size
+                "x": round(s.x),
+                "y": round(s.y),
+                "d": s.direction,
+            }
+            for n, o in self.game.objects.items()
+            for i, s in enumerate(getattr(o, "sprites", [o]))
+        }
+
+        if USE_BINARY_PROTOCOL:
+            return pickle.dumps(current_state)
+        else:
+            # Legacy JSON format
+            return json.dumps(current_state, separators=(",", ":")).encode()
 
     def game_loop(self):
         if self.waiting:
@@ -155,12 +186,16 @@ class Server:
             )
             self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
-        if (server_player := self.players["server"]) is not None:
+        if (server_player := self.players[self.server.getsockname()]) is not None:
             server_player.keyboard_control()
 
     def apply_controls(self, client, data: bytes):
-        if (player := self.players[client]) is not None:
-            player.controls = json.loads(data)
+        if client in self.players and (player := self.players[client]) is not None:
+            try:
+                player.controls = json.loads(data)
+            except json.JSONDecodeError:
+                # Ignore invalid JSON
+                pass
 
 
 class Client:
@@ -169,6 +204,13 @@ class Client:
         self.server_port = server_port
         self.client: socket.socket
         self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
+        self.next_draw = None
+        self.controls = None
+        self.last_sequence = 0
+        self.connected = False
+        self.game_state = {}  # Current game state
+        self.last_update_time = 0
+        self.frame_buffer = []  # Buffer frames to smooth out network jitter
 
     def __enter__(self):
         self.connect()
@@ -178,50 +220,174 @@ class Client:
         self.disconnect()
 
     def connect(self):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client.settimeout(5)
-        self.client.connect((self.server_host, self.server_port))
+        # Send join message
+        self.send_message(JOIN_GAME + f"images/player{0}.png".encode())
+        # Wait for response
+        response = self.receive_message()
+        if response == GAME_ALREADY_STARTED:
+            raise ConnectionRefusedError("Game already started")
+        elif response == OK:
+            self.connected = True
+            self.client.settimeout(0.1)  # Shorter timeout for game loop
+        else:
+            raise ConnectionRefusedError("Unknown response from server")
 
     def disconnect(self):
+        self.connected = False
         self.client.close()
 
-    def request(self, data: str | bytes):
-        self.client.sendall(data.encode() if isinstance(data, str) else data)
-        data = self.client.recv(8138)
-        return data
+    def send_message(self, data):
+        try:
+            self.client.sendto(
+                data if isinstance(data, bytes) else data.encode(),
+                (self.server_host, self.server_port),
+            )
+        except Exception as e:
+            print(f"Error sending data: {e}")
+
+    def receive_message(self):
+        try:
+            data, _ = self.client.recvfrom(BUFFER_SIZE)
+            return data
+        except socket.timeout:
+            return None
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+            return None
 
     def main(self):
-        if (
-            self.request(JOIN_GAME + f"images/player{0}.png".encode())
-            == GAME_ALREADY_STARTED
-        ):
-            print("Game already started, please wait for the server to finish.")
-            return
-        self.next_draw = None
-        self.controls = None
         self.sync_thread = threading.Thread(target=self.sync)
+        self.sync_thread.daemon = True  # Make thread exit when main thread exits
         self.sync_thread.start()
         self.game.main(self.game_loop)
 
     def sync(self):
-        while self.game.running:
-            self.next_draw = self.request(GET_FRAME)
-            if self.controls is not None:
-                self.request(SEND_CONTROLS + self.controls)
+        """Network synchronization thread"""
+        last_control_send = 0
+        control_send_interval = (
+            1 / 30
+        )  # Send controls at 30Hz to reduce network traffic
+
+        while self.game.running and self.connected:
+            try:
+                # Send controls to server (less frequently than we receive updates)
+                current_time = time.time()
+                if (
+                    self.controls is not None
+                    and current_time - last_control_send > control_send_interval
+                ):
+                    self.send_message(SEND_CONTROLS + self.controls)
+                    last_control_send = current_time
+
+                # Receive game state
+                data = self.receive_message()
+                if data:
+                    if data == WAITING:
+                        self.next_draw = WAITING
+                    else:
+                        try:
+                            # Try to parse as binary protocol first
+                            if USE_BINARY_PROTOCOL:
+                                try:
+                                    if USE_COMPRESSION:
+                                        data = zlib.decompress(data)
+                                    msg_type, seq, game_state = pickle.loads(data)
+                                    if msg_type == "SEQ" and seq > self.last_sequence:
+                                        self.last_sequence = seq
+                                        self.game_state = game_state
+                                        self.last_update_time = time.time()
+                                except Exception as e:
+                                    # Fall back to text protocol
+                                    if data.startswith(b"seq:"):
+                                        parts = data.split(b":", 2)
+                                        if len(parts) >= 3:
+                                            seq = int(parts[1])
+                                            if seq > self.last_sequence:
+                                                self.last_sequence = seq
+                                                self.game_state = json.loads(
+                                                    parts[2].decode()
+                                                )
+                                                self.last_update_time = time.time()
+                            else:
+                                # Legacy text protocol
+                                if data.startswith(b"seq:"):
+                                    parts = data.split(b":", 2)
+                                    if len(parts) >= 3:
+                                        seq = int(parts[1])
+                                        if seq > self.last_sequence:
+                                            self.last_sequence = seq
+                                            self.game_state = json.loads(
+                                                parts[2].decode()
+                                            )
+                                            self.last_update_time = time.time()
+                        except (
+                            json.JSONDecodeError,
+                            UnicodeDecodeError,
+                            pickle.PickleError,
+                        ) as e:
+                            print(f"Error parsing game state: {e}")
+                            pass
+            except Exception as e:
+                print(f"Error in sync thread: {e}")
+
+            # Shorter sleep for more responsive client
+            time.sleep(0.001)
 
     def game_loop(self):
-        if self.next_draw == WAITING:
+        """Main game rendering and logic loop"""
+        if (
+            self.game_state is None
+            or self.game_state == {}
+            or self.next_draw == WAITING
+        ):
             waiting_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
                 "Waiting for players...", True, "white"
             )
             self.game.screen.blit(waiting_text, (100, self.game.height / 2))
             return
+
+        # Update controls - do this before rendering to ensure most recent input
         self.controls = json.dumps(get_controls()).encode()
-        if self.next_draw is not None:
-            self.game.screen.fill("black")
+
+        self.game.background_image_path = None
+        # Update game objects from network state - only do this when needed
+        # Check if we need to rebuild all objects
+        if len(self.game_state) != len(self.game.objects):
             self.game.objects.clear()
-            for name, object in json.loads(self.next_draw.decode()).items():
-                self.game.add_object(name, engine.Sprite, **object)
+
+        # Update or create objects from game state
+        if isinstance(self.game_state, bytes):
+            try:
+                self.game_state = pickle.loads(self.game_state)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                print("Error decoding game state")
+                self.game_state = {}
+
+        for name, obj_data in self.game_state.items():
+            # Convert short keys back to full names if needed
+            image_path = obj_data.get("p", obj_data.get("image_path", ""))
+            x = obj_data.get("x", 0)
+            y = obj_data.get("y", 0)
+            direction = obj_data.get("d", obj_data.get("direction", 1))
+
+            if name in self.game.objects:
+                # Update existing object
+                sprite = self.game.objects[name]
+                sprite.x = x
+                sprite.y = y
+                sprite.direction = direction
+            else:
+                # Create new object
+                self.game.add_object(
+                    name,
+                    engine.Sprite,
+                    image_path=image_path,
+                    x=x,
+                    y=y,
+                    direction=direction,
+                )
 
 
 class ServerLobbyMenu(engine.Menu):
