@@ -162,6 +162,29 @@ class Server:
         if (player := self.players[client]) is not None:
             player.controls = json.loads(data)
 
+    def start_game(self):
+        self.game.objects.clear()
+        self.game.add_object(
+            "level",
+            Level.load,
+            pos_filepath="level.csv",
+            image_filepath="images/level/{}.png",
+            y_velocity=1,
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
+        )
+        for i, id in enumerate(self.players):
+            self.players[id] = self.game.add_object(
+                f"player{i}",
+                Player,
+                image_path=f"images/player{i % 2}.png",
+                x=self.game.width / 2 + 100 * int(i),
+                y=200,
+                move_acceleration=4,
+                friction=0.25,
+                jump_acceleration=24,
+                gravity=2,
+            )
+
 
 class Client:
     def __init__(self, server_host, server_port):
@@ -234,26 +257,7 @@ class ServerLobbyMenu(engine.Menu):
     @engine.button("images/Menu/Start.png")
     def start(self):
         self.game.remove_object(self)
-        self.game.add_object(
-            "level",
-            Level.load,
-            pos_filepath="level.csv",
-            image_filepath="images/level/{}.png",
-            y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {1080: -440}}},
-        )
-        for i, id in enumerate(self.server.players):
-            self.server.players[id] = self.game.add_object(
-                f"player{i}",
-                Player,
-                image_path=f"images/player{i % 2}.png",
-                x=self.game.width / 2 + 100 * int(i),
-                y=200,
-                move_acceleration=4,
-                friction=0.25,
-                jump_acceleration=24,
-                gravity=2,
-            )
+        self.server.start_game()
         self.game.background = None
         self.server.waiting = False
 
