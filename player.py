@@ -70,14 +70,12 @@ class Player(Sprite):
             if self._shots < 1:
                 self._shots += 1
                 self.shoot()
-        else:
-            self._shots = 0
 
     def keyboard_control(self):
         self.controls = get_controls()
 
     def shoot(self):
-        bullet = self.game.add_object(
+        self.game.add_object(
             f"shoot_attack{datetime.now()}",
             attacks.ShootAttack,
             max_distance=400,

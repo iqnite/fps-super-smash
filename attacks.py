@@ -34,11 +34,12 @@ class ShootAttack(Attack):
                         obj.on_hit(self)
             if remove_flag:
                 self.game.remove_object(self)
+                self.parent._shots -= 1
         if (
-            not int(self.x) in range(0, self.game.width)
-            or self.distance > self.max_distance
-        ):
+            not (int(self.x) in range(0, self.game.width))
+        ) or self.distance > self.max_distance:
             self.game.remove_object(self)
+            self.parent._shots -= 1
         for image in (self.image1, self.image2):
             image.set_alpha(max(0, 100 * abs(self.max_distance // self.distance)))
         super().loop()

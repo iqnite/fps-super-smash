@@ -1,3 +1,5 @@
+import pygame
+import pygame_textinput
 import engine
 import network
 
@@ -8,8 +10,42 @@ class StartMenu(engine.Menu):
     @engine.button("images/Menu/Login.png")
     def connect(self):
         self.game.running = False
-        ip = input("Enter IP Address: ")
-        client = network.Client(ip, network.PORT)
+        font = pygame.font.Font("images/Anta-Regular.ttf", 30)
+        enter_text = font.render(
+            "Enter the server IP address and press Enter to connect.", True, "white"
+        )
+        ip_input = pygame_textinput.TextInputVisualizer(
+            font_color="white",
+            font_object=font,
+            cursor_color="white",
+        )
+
+        screen = pygame.display.set_mode((0, 0))
+        clock = pygame.time.Clock()
+
+        wating = True
+        while wating:
+            if self.game.background:
+                screen.blit(self.game.background, (0, 0))
+            else:
+                screen.fill("black")
+
+            events = pygame.event.get()
+            ip_input.update(events)  # type: ignore
+            screen.blit(enter_text, (10, screen.get_height() / 2 - 50))
+            screen.blit(ip_input.surface, (10, screen.get_height() / 2))
+
+            for event in events:
+                if event.type == pygame.QUIT or (
+                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+                ):
+                    quit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    wating = False
+
+            pygame.display.update()
+            clock.tick(30)
+        client = network.Client(ip_input.value, network.PORT)
         try:
             with client:
                 client.main()
@@ -24,6 +60,9 @@ class StartMenu(engine.Menu):
             quit()
         except ConnectionResetError:
             print("Connection reset by server.")
+            quit()
+        except ValueError:
+            print("Invalid IP address.")
             quit()
 
     @engine.button("images/Menu/Start.png")
