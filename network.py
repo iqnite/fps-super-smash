@@ -254,7 +254,7 @@ class ServerLobbyMenu(engine.Menu):
                 jump_acceleration=24,
                 gravity=2,
             )
-        self.game.background = None
+        self.game.background_image_path = None
         self.server.waiting = False
 
     @engine.button("images/Menu/Cancel.png")
