@@ -78,5 +78,12 @@ class StartMenu(engine.Menu):
 
 
 game = engine.Game((0, 0), "images/Menu/Background.png")
+game.add_object(
+    "logo",
+    engine.Sprite,
+    image_path="images/fps-logo.svg",
+    x=game.width / 2 - 200,
+    y=10,
+)
 game.add_object("StartMenu", StartMenu)
 game.main()
