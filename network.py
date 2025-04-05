@@ -1,11 +1,11 @@
-import socket
 import json
+import pickle
+import psutil
+import socket
 import threading
 import time
-import pickle  # For binary serialization
-import zlib  # For compression
+import zlib
 
-import psutil
 import pygame
 import engine
 from level import Level
@@ -25,9 +25,8 @@ GAME_ALREADY_STARTED = b"game_already_started"
 
 # UDP specific constants
 BUFFER_SIZE = 65507  # Max UDP packet size
-BROADCAST_INTERVAL = 1 / 60  # 60fps broadcast rate for smoother updates
+BROADCAST_INTERVAL = 1 / 60  # 60FPS broadcast rate for smoother updates
 MAX_PACKET_AGE = 1.0  # Discard packets older than this
-USE_BINARY_PROTOCOL = True  # Use more efficient binary serialization
 USE_COMPRESSION = True  # Compress network data
 
 
@@ -132,35 +131,23 @@ class Server:
             self.server.sendto(UNKNOWN, client_address)
 
     def broadcast_game_state(self):
-        """Send game state to all connected clients"""
         game_state = self.serialize_game()
         self.sequence_number += 1
 
-        if USE_BINARY_PROTOCOL:
-            # Binary format: (b'SEQ', sequence_number, game_state_bytes)
-            data = pickle.dumps(("SEQ", self.sequence_number, game_state))
-            if USE_COMPRESSION:
-                data = zlib.compress(data, level=1)  # Use fast compression (level 1)
-        else:
-            # Legacy text format
-            seq_header = f"seq:{self.sequence_number}:".encode()
-            data = (
-                seq_header + game_state.encode()
-                if isinstance(game_state, str)
-                else seq_header + game_state
-            )
+        # Binary format: (b'SEQ', sequence_number, game_state_bytes)
+        data = pickle.dumps(("SEQ", self.sequence_number, game_state))
+        if USE_COMPRESSION:
+            data = zlib.compress(data, level=1)  # Use fast compression (level 1)
 
         # Send to all clients with error handling
-        for client_address in self.client_addresses[
-            :
-        ]:  # Copy list to allow modification during iteration
+        # Copy list to allow modification during iteration
+        for client_address in self.client_addresses[:]:
             try:
                 self.server.sendto(data, client_address)
             except Exception as e:
                 print(f"Error sending to {client_address}: {e}")
 
     def serialize_game(self):
-        """Create a compact representation of the game state"""
         # Collect current game state
         current_state = {
             f"{n}{i}": {
@@ -173,11 +160,7 @@ class Server:
             for i, s in enumerate(getattr(o, "sprites", [o]))
         }
 
-        if USE_BINARY_PROTOCOL:
-            return pickle.dumps(current_state)
-        else:
-            # Legacy JSON format
-            return json.dumps(current_state, separators=(",", ":")).encode()
+        return pickle.dumps(current_state)
 
     def game_loop(self):
         if self.waiting:
@@ -288,45 +271,14 @@ class Client:
                         self.next_draw = WAITING
                     else:
                         try:
-                            # Try to parse as binary protocol first
-                            if USE_BINARY_PROTOCOL:
-                                try:
-                                    if USE_COMPRESSION:
-                                        data = zlib.decompress(data)
-                                    msg_type, seq, game_state = pickle.loads(data)
-                                    if msg_type == "SEQ" and seq > self.last_sequence:
-                                        self.last_sequence = seq
-                                        self.game_state = game_state
-                                        self.last_update_time = time.time()
-                                except Exception as e:
-                                    # Fall back to text protocol
-                                    if data.startswith(b"seq:"):
-                                        parts = data.split(b":", 2)
-                                        if len(parts) >= 3:
-                                            seq = int(parts[1])
-                                            if seq > self.last_sequence:
-                                                self.last_sequence = seq
-                                                self.game_state = json.loads(
-                                                    parts[2].decode()
-                                                )
-                                                self.last_update_time = time.time()
-                            else:
-                                # Legacy text protocol
-                                if data.startswith(b"seq:"):
-                                    parts = data.split(b":", 2)
-                                    if len(parts) >= 3:
-                                        seq = int(parts[1])
-                                        if seq > self.last_sequence:
-                                            self.last_sequence = seq
-                                            self.game_state = json.loads(
-                                                parts[2].decode()
-                                            )
-                                            self.last_update_time = time.time()
-                        except (
-                            json.JSONDecodeError,
-                            UnicodeDecodeError,
-                            pickle.PickleError,
-                        ) as e:
+                            if USE_COMPRESSION:
+                                data = zlib.decompress(data)
+                            msg_type, seq, game_state = pickle.loads(data)
+                            if msg_type == "SEQ" and seq > self.last_sequence:
+                                self.last_sequence = seq
+                                self.game_state = game_state
+                                self.last_update_time = time.time()
+                        except (UnicodeDecodeError, pickle.PickleError) as e:
                             print(f"Error parsing game state: {e}")
                             pass
             except Exception as e:
@@ -361,7 +313,7 @@ class Client:
         if isinstance(self.game_state, bytes):
             try:
                 self.game_state = pickle.loads(self.game_state)
-            except (json.JSONDecodeError, UnicodeDecodeError):
+            except UnicodeDecodeError:
                 print("Error decoding game state")
                 self.game_state = {}
 
