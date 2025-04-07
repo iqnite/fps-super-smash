@@ -86,9 +86,9 @@ class Sprite:
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.image1 = pygame.image.load(image_path)
-        self.image2 = pygame.transform.flip(self.image1, True, False)
-        self.image = self.image1
+        self.normal_image = pygame.image.load(image_path)
+        self.images = [self.normal_image]
+        self.image = self.normal_image
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
@@ -130,6 +130,10 @@ class Sprite:
         for _ in range(abs(int(value))):
             self.y += abs(value) / value
         self.y += value - int(value)
+
+    @property
+    def flipped_image(self):
+        return pygame.transform.flip(self.normal_image, True, False)
 
     def collides_with(self, other):
         if isinstance(other, str):
@@ -184,7 +188,11 @@ class Sprite:
                         self.y = b
 
     def draw(self):
-        self.image = self.image1 if self.direction == 1 else self.image2
+        self.image = (
+            self.normal_image
+            if self.direction == 1
+            else pygame.transform.flip(self.normal_image, True, False)
+        )
         self.game.screen.blit(self.image, (self.x, self.y))
 
 
@@ -269,18 +277,20 @@ class Button(Sprite):
         self.menu = menu
         self.func = func
         self.click_flag = 0
-        self.image2 = pygame.transform.scale(
-            self.image1,
-            (
-                self.image1.get_width() * 1.3,
-                self.image1.get_height() * 1.3,
-            ),
+        self.images.append(
+            pygame.transform.scale(
+                self.normal_image,
+                (
+                    self.normal_image.get_width() * 1.3,
+                    self.normal_image.get_height() * 1.3,
+                ),
+            )
         )
 
     def loop(self):
         super().loop()
         if self.rect.collidepoint(pygame.mouse.get_pos()):
-            self.direction = -1
+            self.normal_image = self.images[1]
             if pygame.mouse.get_pressed()[0]:
                 self.click_flag = 1
             elif self.click_flag == 1:
@@ -289,7 +299,7 @@ class Button(Sprite):
                 self.click_flag = 0
                 self.func(self.menu)
         else:
-            self.direction = 1
+            self.normal_image = self.images[0]
 
 
 def button(image_path: str):

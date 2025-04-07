@@ -40,6 +40,6 @@ class ShootAttack(Attack):
         ) or self.distance > self.max_distance:
             self.game.remove_object(self)
             self.parent._shots -= 1
-        for image in (self.image1, self.image2):
+        for image in (self.normal_image, self.flipped_image):
             image.set_alpha(max(0, 100 * abs(self.max_distance // self.distance)))
         super().loop()
