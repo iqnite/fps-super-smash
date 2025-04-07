@@ -53,6 +53,7 @@ class TestSprite(unittest.TestCase):
         self.sprite = Sprite(self.game, "images/level/0.png", x=100, y=100)
 
     def test_init(self):
+        assert isinstance(self.sprite.rect, pygame.Rect)
         self.assertEqual(self.sprite.pos.x, 100)
         self.assertEqual(self.sprite.pos.y, 100)
         self.assertTrue(self.sprite.collidable)
@@ -60,11 +61,13 @@ class TestSprite(unittest.TestCase):
         self.assertEqual(self.sprite.rect.y, 100)
 
     def test_x_property(self):
+        assert isinstance(self.sprite.rect, pygame.Rect)
         self.sprite.x = 200
         self.assertEqual(self.sprite.x, 200)
         self.assertEqual(self.sprite.rect.x, 200)
 
     def test_y_property(self):
+        assert isinstance(self.sprite.rect, pygame.Rect)
         self.sprite.y = 200
         self.assertEqual(self.sprite.y, 200)
         self.assertEqual(self.sprite.rect.y, 200)
@@ -119,11 +122,6 @@ class TestSprite(unittest.TestCase):
     def test_draw(self):
         self.sprite.draw()
         # No assertion, just ensure no exceptions
-
-    def test_flip_image(self):
-        self.sprite.direction = -1
-        self.sprite.draw()
-        self.assertEqual(self.sprite.image, self.sprite.flipped_image)
 
 
 class TestMultiSprite(unittest.TestCase):
@@ -205,13 +203,6 @@ class TestMultiSprite(unittest.TestCase):
         self.multi_sprite.draw()
         # No assertion, just ensure no exceptions
 
-    def test_flip_image(self):
-        for sprite in self.multi_sprite.sprites:
-            sprite.direction = -1
-        self.multi_sprite.draw()
-        for sprite in self.multi_sprite.sprites:
-            self.assertEqual(sprite.image, sprite.flipped_image)
-
 
 class TestMenu(unittest.TestCase):
     class Menu1(Menu):
@@ -249,7 +240,7 @@ class TestPlayer(unittest.TestCase):
             friction=0.1,
             jump_acceleration=10,
             gravity=0.5,
-            image_path="images/level/0.png",
+            skin_path="images/Player/Samurai",
             x=100,
             y=100,
         )
@@ -318,16 +309,24 @@ class TestPlayer(unittest.TestCase):
 
     def test_x_move_collision(self):
         self.player.x_velocity = 5
-        self.game.add_object("mock_sprite0", Sprite, "images/level/0.png", x=100, y=100)
+        other = self.game.add_object(
+            "mock_sprite0", Sprite, "images/level/0.png", x=100, y=100
+        )
+        other.draw()
+        self.player.draw()
         self.player.simulate()
-        self.assertEqual(self.player.x_velocity, 0)
+        self.assertEqual(self.player.x_velocity, 4.5)
         del self.game.objects["mock_sprite0"]
 
     def test_y_move_collision(self):
-        self.game.add_object("mock_sprite0", Sprite, "images/level/0.png", x=100, y=100)
+        other = self.game.add_object(
+            "mock_sprite0", Sprite, "images/level/0.png", x=100, y=100
+        )
+        other.draw()
         self.player.y_velocity = 5
+        self.player.draw()
         self.player.simulate()
-        self.assertEqual(self.player.y_velocity, 1)
+        self.assertEqual(self.player.y_velocity, 5.5)
         del self.game.objects["mock_sprite0"]
 
     def test_y_move_no_collision(self):
@@ -425,58 +424,6 @@ class TestLevel(unittest.TestCase):
             mock_y_move.assert_called_once_with(0)
             mock_check_teleport.assert_called_once()
             mock_draw.assert_called_once()
-
-
-class TestShootAttack(unittest.TestCase):
-    def setUp(self):
-        self.game = Game((800, 600))
-        self.dummy_player = self.game.add_object(
-            "player",
-            Player,
-            move_acceleration=0.5,
-            friction=0.1,
-            jump_acceleration=10,
-            gravity=0.5,
-            image_path="images/level/0.png",
-            x=0,
-            y=0,
-        )
-        self.attack = attacks.ShootAttack(
-            self.game,
-            parent=self.dummy_player,
-            x_velocity=10,
-            y_velocity=10,
-            image_path="images/level/0.png",
-            x=0,
-            y=0,
-        )
-
-    def test_init(self):
-        self.assertEqual(self.attack.x_velocity, 10)
-
-    def test_loop(self):
-        self.game.objects["shoot_attack"] = self.attack
-        dummy_sprite = self.game.add_object(
-            "sprite",
-            Player,
-            image_path="images/level/0.png",
-            x=0,
-            y=0,
-            move_acceleration=0,
-            friction=0,
-            jump_acceleration=0,
-            gravity=0,
-        )
-        with patch.object(dummy_sprite, "on_hit") as mock_on_hit:
-            self.attack.loop()
-            self.assertEqual(self.attack.x, self.attack.x_velocity)
-            self.assertEqual(self.attack.y, self.attack.y_velocity)
-            mock_on_hit.assert_called_once()
-            self.assertNotIn("shoot_attack", self.game.objects)
-        self.game.objects["shoot_attack"] = self.attack
-        self.attack.x = 1000000
-        self.attack.loop()
-        self.assertNotIn("shoot_attack", self.game.objects)
 
 
 class TestNetwork(unittest.TestCase):

@@ -73,7 +73,7 @@ class Sprite:
     def __init__(
         self,
         game: Game,
-        image_path: str,
+        image_path=None,
         x=None,
         y=None,
         pos_vector=None,
@@ -86,7 +86,7 @@ class Sprite:
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.normal_image = pygame.image.load(image_path)
+        self.normal_image = pygame.image.load(image_path) if image_path else None
         self.images = [self.normal_image]
         self.image = self.normal_image
         if pos_vector is not None:
@@ -95,9 +95,6 @@ class Sprite:
             self.pos = pygame.Vector2(x, y)
         else:
             self.pos = pygame.Vector2(0, 0)
-        self.rect = self.image.get_rect()
-        self.rect.x = int(self.pos.x)
-        self.rect.y = int(self.pos.y)
 
     def loop(self):
         self.check_teleport()
@@ -110,7 +107,6 @@ class Sprite:
     @x.setter
     def x(self, value):
         self.pos.x = value
-        self.rect.x = int(self.pos.x)
 
     def x_move(self, value):
         for _ in range(abs(int(value))):
@@ -124,7 +120,6 @@ class Sprite:
     @y.setter
     def y(self, value):
         self.pos.y = value
-        self.rect.y = int(self.pos.y)
 
     def y_move(self, value):
         for _ in range(abs(int(value))):
@@ -132,8 +127,18 @@ class Sprite:
         self.y += value - int(value)
 
     @property
+    def rect(self):
+        if self.image is None:
+            return None
+        rect = self.image.get_rect()
+        rect.x = int(self.pos.x)
+        rect.y = int(self.pos.y)
+        return rect
+
+    @property
     def flipped_image(self):
-        return pygame.transform.flip(self.normal_image, True, False)
+        if self.normal_image is not None:
+            return pygame.transform.flip(self.normal_image, True, False)
 
     def collides_with(self, other):
         if isinstance(other, str):
@@ -143,6 +148,8 @@ class Sprite:
         if isinstance(other, list):
             return any(self.collides_with(obj) for obj in other)
         if isinstance(other, Sprite):
+            if self.rect is None or other.rect is None:
+                return False
             return self.rect.colliderect(other.rect)
 
     def colliding(self, otherType=None):
@@ -188,6 +195,8 @@ class Sprite:
                         self.y = b
 
     def draw(self):
+        if self.normal_image is None:
+            return
         self.image = (
             self.normal_image
             if self.direction == 1
@@ -277,6 +286,7 @@ class Button(Sprite):
         self.menu = menu
         self.func = func
         self.click_flag = 0
+        assert self.normal_image is not None
         self.images.append(
             pygame.transform.scale(
                 self.normal_image,
@@ -289,7 +299,7 @@ class Button(Sprite):
 
     def loop(self):
         super().loop()
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
+        if self.rect is not None and self.rect.collidepoint(pygame.mouse.get_pos()):
             self.normal_image = self.images[1]
             if pygame.mouse.get_pressed()[0]:
                 self.click_flag = 1

@@ -13,9 +13,10 @@ class Player(Sprite):
         friction: float,
         jump_acceleration: float,
         gravity: float,
+        skin_path: str,
         **kwargs,
     ):
-        super().__init__(game, **kwargs)
+        super().__init__(game, image_path="", **kwargs)
         self.move_acceleration = move_acceleration
         self.friction = friction
         self.jump_acceleration = jump_acceleration
@@ -26,22 +27,21 @@ class Player(Sprite):
         self._shots = 0
         self.health = 100
         self.controls = {}
-
         self.animations = {
-            "idle": self.load_frames("Samurai_Commander/idle.png", 5),
-            "run": self.load_frames("Samurai_Commander/Run.png", 8),
-            "jump": self.load_frames("Samurai_Commander/Jump.png", 7),
-            "attack": self.load_frames("Samurai_Commander/Attack_1.png", 4),
-            "attack_2": self.load_frames("Samurai_Commander/Attack_2.png", 5),
-            "attack_3": self.load_frames("Samurai_Commander/Attack_3.png", 4),
-            "death": self.load_frames("Samurai_Commander/Dead.png", 6)
+            "idle": self.load_frames(f"{skin_path}/idle.png", 5),
+            "run": self.load_frames(f"{skin_path}/Run.png", 8),
+            "jump": self.load_frames(f"{skin_path}/Jump.png", 7),
+            "attack": self.load_frames(f"{skin_path}/Attack_1.png", 4),
+            "attack_2": self.load_frames(f"{skin_path}/Attack_2.png", 5),
+            "attack_3": self.load_frames(f"{skin_path}/Attack_3.png", 4),
+            "death": self.load_frames(f"{skin_path}/Dead.png", 6),
         }
         self.current_animation = "idle"
         self.current_frame = 0
-        self.frame_rate = 12  # ~12 FPS
-
+        self.frame_rate = 12
 
     def loop(self):
+        self.animate()
         self.read_controls()
         self.simulate()
         self.check_fall()
@@ -118,19 +118,26 @@ class Player(Sprite):
     def load_frames(self, image_path, frame_count):
         sprite_sheet = pygame.image.load(image_path).convert_alpha()
         frame_width = sprite_sheet.get_width() // frame_count
-        frames = [sprite_sheet.subsurface(pygame.Rect(i * frame_width, 0, frame_width, sprite_sheet.get_height())) for i in range(frame_count)]
+        frames = [
+            sprite_sheet.subsurface(
+                pygame.Rect(i * frame_width, 0, frame_width, sprite_sheet.get_height())
+            )
+            for i in range(frame_count)
+        ]
         return frames
 
     def animate(self):
         frames = self.animations[self.current_animation]
-        frame = frames[self.current_frame]
-        self.image = (frame, (self.x_position - frame.get_width() // 2, 300 - frame.get_height() // 2))  # Center the frame
-        self.current_frame = (self.current_frame + 1) % len(frames)
+        frame = frames[int(self.current_frame)]
+        self.current_frame = (self.current_frame + 1 / self.frame_rate) % len(frames)
+        self.normal_image = pygame.transform.scale(frame, (65, 70))
+        self.draw()
 
     def set_animation(self, animation_name):
         if animation_name in self.animations:
             self.current_animation = animation_name
             self.current_frame = 0
+
 
 def get_controls():
     key = pygame.key.get_pressed()

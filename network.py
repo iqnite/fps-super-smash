@@ -364,7 +364,7 @@ class ServerLobbyMenu(engine.Menu):
             self.server.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                image_path=f"images/player{i % 2}.png",
+                skin_path=f"images/Player/{('Samurai_Commander', 'Samurai', 'Samurai_Archer')[i % 3]}",
                 x=self.game.width / 2 + 100 * int(i),
                 y=200,
                 move_acceleration=4,
