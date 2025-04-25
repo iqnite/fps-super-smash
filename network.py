@@ -151,7 +151,7 @@ class Server:
         # Collect current game state
         current_state = {
             f"{n}{i}": {
-                "p": s.image_path,  # Shorter key names to reduce size
+                "p": s.image_path,
                 "x": round(s.x),
                 "y": round(s.y),
                 "d": s.direction,
@@ -332,7 +332,7 @@ class Client:
                 sprite.direction = direction
             else:
                 # Create new object
-                self.game.add_object(
+                sprite = self.game.add_object(
                     name,
                     engine.Sprite,
                     image_path=image_path,
@@ -361,29 +361,18 @@ class ServerLobbyMenu(engine.Menu):
             common_sprite_args={"teleport": {"+y": {1080: -440}}},
         )
         for i, id in enumerate(self.server.players):
-            image_path = (
-                "images/Player/"
-                + ("Samurai_Commander", "Samurai", "Samurai_Archer")[i % 3]
-            )
+            image_path = "Samurai_Commander"
             self.server.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                x=self.game.width / 2 + 100 * int(i),
-                y=200,
+                x=100 + self.game.width / 2 + 100 * int(i),
+                y=100,
                 move_acceleration=4,
                 friction=0.25,
                 jump_acceleration=24,
                 gravity=2,
                 image_path=image_path,
-                animations={
-                    "idle": (image_path + "/idle.png", 5),
-                    "run": (image_path + "/Run.png", 8),
-                    "jump": (image_path + "/Jump.png", 7),
-                    "attack": (image_path + "/Attack_1.png", 4),
-                    "attack_2": (image_path + "/Attack_2.png", 5),
-                    "attack_3": (image_path + "/Attack_3.png", 4),
-                    "death": (image_path + "/Dead.png", 6),
-                },
+                animation="idle",
             )
         self.game.background_image_path = None
         self.server.waiting = False

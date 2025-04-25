@@ -1,12 +1,49 @@
-from functools import cached_property
+from typing import Any
 import pygame
+
+
+ANIMATION_ROOT = "images/Player/"
+ANIMATION_DEFINITIONS = {
+    "Samurai_Commander": {
+        "idle": ("/Idle.png", 5),
+        "run": ("/Run.png", 8),
+        "jump": ("/Jump.png", 7),
+        "attack": ("/Attack_1.png", 4),
+        "attack_2": ("/Attack_2.png", 5),
+        "attack_3": ("/Attack_3.png", 4),
+        "death": ("/Dead.png", 6),
+    }
+}
+
+
+def load_frames(image_path, frame_count):
+    sprite_sheet = pygame.image.load(image_path)  # .convert_alpha()
+    frame_width = sprite_sheet.get_width() // frame_count
+    frames = [
+        sprite_sheet.subsurface(
+            pygame.Rect(i * frame_width, 0, frame_width, sprite_sheet.get_height())
+        )
+        for i in range(frame_count)
+    ]
+    return frames
+
+
+ANIMATIONS = {
+    skin_name: {
+        animation_name: load_frames(
+            "images/Player/" + skin_name + animation[0], animation[1]
+        )
+        for animation_name, animation in skin.items()
+    }
+    for skin_name, skin in ANIMATION_DEFINITIONS.items()
+}
 
 
 class Game:
     def __init__(self, screen_size, background_image_path=None):
         pygame.init()
         self.screen = pygame.display.set_mode(screen_size)
-        self.objects = {}
+        self.objects: dict[Any, Sprite | MultiSprite] = {}
         self.clock = pygame.time.Clock()
         self.running = True
         self.dt = 0
@@ -80,31 +117,27 @@ class Sprite:
         direction=1,
         collidable=True,
         teleport=dict(),
-        animations=None,
+        animation=None,
     ):
         self.game = game
         self.image_path = image_path
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.normal_image = pygame.image.load(image_path) if not animations else None
+        self.animations = ANIMATIONS.get(image_path, {})
+        if animation is not None:
+            self.normal_image = self.animations[animation][0]
+        else:
+            self.normal_image = pygame.image.load(image_path)
         self.images = [self.normal_image]
         self.image = self.normal_image
-        self.animations = (
-            {
-                name: self.load_frames(*animation)
-                for name, animation in animations.items()
-            }
-            if animations
-            else {}
-        )
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
             self.pos = pygame.Vector2(x, y)
         else:
             self.pos = pygame.Vector2(0, 0)
-        self.current_animation = "idle"
+        self.current_animation = animation or "idle"
         self.current_frame = 0
         self.frame_rate = 12
 
@@ -218,17 +251,6 @@ class Sprite:
         )
         self.game.screen.blit(self.image, (self.x, self.y))
 
-    def load_frames(self, image_path, frame_count):
-        sprite_sheet = pygame.image.load(image_path).convert_alpha()
-        frame_width = sprite_sheet.get_width() // frame_count
-        frames = [
-            sprite_sheet.subsurface(
-                pygame.Rect(i * frame_width, 0, frame_width, sprite_sheet.get_height())
-            )
-            for i in range(frame_count)
-        ]
-        return frames
-
     def animate(self):
         if not self.animations:
             return
@@ -237,9 +259,14 @@ class Sprite:
         self.current_frame = (self.current_frame + 1 / self.frame_rate) % len(frames)
         self.normal_image = pygame.transform.scale(frame, (65, 70))
 
-    def set_animation(self, animation_name):
-        if animation_name in self.animations:
-            self.current_animation = animation_name
+    @property
+    def animation(self):
+        return self.current_animation
+
+    @animation.setter
+    def animation(self, value):
+        if value in self.animations:
+            self.current_animation = value
 
 
 class MultiSprite:
@@ -255,6 +282,11 @@ class MultiSprite:
     def x(self):
         return self.sprites[0].x
 
+    @x.setter
+    def x(self, value):
+        while round(self.x) != round(value):
+            self.x_move(1 if value > self.x else -1)
+
     def x_move(self, value):
         for sprite in self.sprites:
             sprite.x_move(value)
@@ -263,9 +295,32 @@ class MultiSprite:
     def y(self):
         return self.sprites[0].y
 
+    @y.setter
+    def y(self, value):
+        while round(self.y) != round(value):
+            self.y_move(1 if value > self.y else -1)
+
     def y_move(self, value):
         for sprite in self.sprites:
             sprite.y_move(value)
+
+    @property
+    def direction(self):
+        return self.sprites[0].direction
+
+    @direction.setter
+    def direction(self, value):
+        for sprite in self.sprites:
+            sprite.direction = value
+
+    @property
+    def animation(self):
+        return self.sprites[0].animation
+
+    @animation.setter
+    def animation(self, value):
+        for sprite in self.sprites:
+            sprite.animation = value
 
     def collides_with(self, other):
         return any(sprite.collides_with(other) for sprite in self.sprites)
