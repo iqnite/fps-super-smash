@@ -240,7 +240,7 @@ class TestPlayer(unittest.TestCase):
             friction=0.1,
             jump_acceleration=10,
             gravity=0.5,
-            skin_path="images/Player/Samurai",
+            image_path="images/Player/Samurai",
             x=100,
             y=100,
         )

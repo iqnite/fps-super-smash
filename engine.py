@@ -73,32 +73,53 @@ class Sprite:
     def __init__(
         self,
         game: Game,
-        image_path=None,
+        image_path: str,
         x=None,
         y=None,
         pos_vector=None,
         direction=1,
         collidable=True,
         teleport=dict(),
+        animated=False,
     ):
         self.game = game
         self.image_path = image_path
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.normal_image = pygame.image.load(image_path) if image_path else None
+        self.normal_image = pygame.image.load(image_path) if not animated else None
         self.images = [self.normal_image]
         self.image = self.normal_image
+        self.animated = animated
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
             self.pos = pygame.Vector2(x, y)
         else:
             self.pos = pygame.Vector2(0, 0)
+        self.animations = (
+            {
+                "idle": self.load_frames(f"{image_path}/idle.png", 5),
+                "run": self.load_frames(f"{image_path}/Run.png", 8),
+                "jump": self.load_frames(f"{image_path}/Jump.png", 7),
+                "attack": self.load_frames(f"{image_path}/Attack_1.png", 4),
+                "attack_2": self.load_frames(f"{image_path}/Attack_2.png", 5),
+                "attack_3": self.load_frames(f"{image_path}/Attack_3.png", 4),
+                "death": self.load_frames(f"{image_path}/Dead.png", 6),
+            }
+            if animated
+            else {}
+        )
+        self.current_animation = "idle"
+        self.current_frame = 0
+        self.frame_rate = 12
 
     def loop(self):
         self.check_teleport()
-        self.draw()
+        if self.animated:
+            self.animate()
+        else:
+            self.draw()
 
     @property
     def x(self):
@@ -204,6 +225,29 @@ class Sprite:
         )
         self.game.screen.blit(self.image, (self.x, self.y))
 
+    def load_frames(self, image_path, frame_count):
+        sprite_sheet = pygame.image.load(image_path).convert_alpha()
+        frame_width = sprite_sheet.get_width() // frame_count
+        frames = [
+            sprite_sheet.subsurface(
+                pygame.Rect(i * frame_width, 0, frame_width, sprite_sheet.get_height())
+            )
+            for i in range(frame_count)
+        ]
+        return frames
+
+    def animate(self):
+        frames = self.animations[self.current_animation]
+        frame = frames[int(self.current_frame)]
+        self.current_frame = (self.current_frame + 1 / self.frame_rate) % len(frames)
+        self.normal_image = pygame.transform.scale(frame, (65, 70))
+        self.draw()
+
+    def set_animation(self, animation_name):
+        if animation_name in self.animations:
+            self.current_animation = animation_name
+            self.current_frame = 0
+
 
 class MultiSprite:
     def __init__(self, game: Game, sprite_args):
@@ -269,7 +313,7 @@ class Menu:
                     getattr(self, name)._engine_kwargs_["image_path"]
                 ).get_width()
                 / 2,
-                y=y + i * self.button_distance
+                y=y + i * self.button_distance,
             )
             for i, (name, func) in enumerate(self.__class__.__dict__.items())
             if hasattr(func, "_engine_type_")

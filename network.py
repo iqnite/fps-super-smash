@@ -364,13 +364,14 @@ class ServerLobbyMenu(engine.Menu):
             self.server.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                skin_path=f"images/Player/{('Samurai_Commander', 'Samurai', 'Samurai_Archer')[i % 3]}",
+                image_path=f"images/Player/{('Samurai_Commander', 'Samurai', 'Samurai_Archer')[i % 3]}",
                 x=self.game.width / 2 + 100 * int(i),
                 y=200,
                 move_acceleration=4,
                 friction=0.25,
                 jump_acceleration=24,
                 gravity=2,
+                animated=True,
             )
         self.game.background_image_path = None
         self.server.waiting = False
