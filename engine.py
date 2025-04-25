@@ -80,46 +80,39 @@ class Sprite:
         direction=1,
         collidable=True,
         teleport=dict(),
-        animated=False,
+        animations=None,
     ):
         self.game = game
         self.image_path = image_path
         self.teleport = teleport
         self.direction = direction
         self.collidable = collidable
-        self.normal_image = pygame.image.load(image_path) if not animated else None
+        self.normal_image = pygame.image.load(image_path) if not animations else None
         self.images = [self.normal_image]
         self.image = self.normal_image
-        self.animated = animated
+        self.animations = (
+            {
+                name: self.load_frames(*animation)
+                for name, animation in animations.items()
+            }
+            if animations
+            else {}
+        )
         if pos_vector is not None:
             self.pos = pos_vector
         elif x is not None and y is not None:
             self.pos = pygame.Vector2(x, y)
         else:
             self.pos = pygame.Vector2(0, 0)
-        self.animations = (
-            {
-                "idle": self.load_frames(f"{image_path}/idle.png", 5),
-                "run": self.load_frames(f"{image_path}/Run.png", 8),
-                "jump": self.load_frames(f"{image_path}/Jump.png", 7),
-                "attack": self.load_frames(f"{image_path}/Attack_1.png", 4),
-                "attack_2": self.load_frames(f"{image_path}/Attack_2.png", 5),
-                "attack_3": self.load_frames(f"{image_path}/Attack_3.png", 4),
-                "death": self.load_frames(f"{image_path}/Dead.png", 6),
-            }
-            if animated
-            else {}
-        )
         self.current_animation = "idle"
         self.current_frame = 0
         self.frame_rate = 12
 
     def loop(self):
         self.check_teleport()
-        if self.animated:
+        if self.animations:
             self.animate()
-        else:
-            self.draw()
+        self.draw()
 
     @property
     def x(self):
@@ -237,11 +230,12 @@ class Sprite:
         return frames
 
     def animate(self):
+        if not self.animations:
+            return
         frames = self.animations[self.current_animation]
         frame = frames[int(self.current_frame)]
         self.current_frame = (self.current_frame + 1 / self.frame_rate) % len(frames)
         self.normal_image = pygame.transform.scale(frame, (65, 70))
-        self.draw()
 
     def set_animation(self, animation_name):
         if animation_name in self.animations:

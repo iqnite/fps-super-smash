@@ -361,17 +361,29 @@ class ServerLobbyMenu(engine.Menu):
             common_sprite_args={"teleport": {"+y": {1080: -440}}},
         )
         for i, id in enumerate(self.server.players):
+            image_path = (
+                "images/Player/"
+                + ("Samurai_Commander", "Samurai", "Samurai_Archer")[i % 3]
+            )
             self.server.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                image_path=f"images/Player/{('Samurai_Commander', 'Samurai', 'Samurai_Archer')[i % 3]}",
                 x=self.game.width / 2 + 100 * int(i),
                 y=200,
                 move_acceleration=4,
                 friction=0.25,
                 jump_acceleration=24,
                 gravity=2,
-                animated=True,
+                image_path=image_path,
+                animations={
+                    "idle": (image_path + "/idle.png", 5),
+                    "run": (image_path + "/Run.png", 8),
+                    "jump": (image_path + "/Jump.png", 7),
+                    "attack": (image_path + "/Attack_1.png", 4),
+                    "attack_2": (image_path + "/Attack_2.png", 5),
+                    "attack_3": (image_path + "/Attack_3.png", 4),
+                    "death": (image_path + "/Dead.png", 6),
+                },
             )
         self.game.background_image_path = None
         self.server.waiting = False
