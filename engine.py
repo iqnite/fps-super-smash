@@ -246,7 +246,6 @@ class Sprite:
     def set_animation(self, animation_name):
         if animation_name in self.animations:
             self.current_animation = animation_name
-            self.current_frame = 0
 
 
 class MultiSprite:
