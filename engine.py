@@ -1,3 +1,4 @@
+from functools import cached_property
 import pygame
 
 
@@ -9,12 +10,9 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         self.dt = 0
-        self.background = None
+        self.background_image_path = background_image_path
         self.death_menu_active = False
         self.death_menu = None
-        if background_image_path:
-            self.background = pygame.image.load(background_image_path)
-            self.background = pygame.transform.scale(self.background, (self.width, self.height))
 
     def main(self, func=None):
         while self.running:
@@ -66,6 +64,13 @@ class Game:
     @property
     def height(self):
         return self.screen.get_height()
+
+    @property
+    def background(self):
+        if self.background_image_path is not None:
+            return pygame.transform.scale(
+                pygame.image.load(self.background_image_path), (self.width, self.height)
+            )
 
 
 class Sprite:
