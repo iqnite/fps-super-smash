@@ -11,8 +11,6 @@ class Game:
         self.running = True
         self.dt = 0
         self.background_image_path = background_image_path
-        self.death_menu_active = False
-        self.death_menu = None
 
     def main(self, func=None):
         while self.running:
@@ -30,15 +28,11 @@ class Game:
             else:
                 self.screen.fill("black")
 
-            if self.death_menu_active:
-                if self.death_menu:
-                    self.death_menu.loop()
-            else:
-                if func:
-                    func()
-                for obj in list(self.objects.values()).copy():
-                    if obj and obj.loop:
-                        obj.loop()
+            if func:
+                func()
+            for obj in list(self.objects.values()).copy():
+                if obj and obj.loop:
+                    obj.loop()
 
             pygame.display.flip()
         except pygame.error:
@@ -303,15 +297,3 @@ def button(image_path: str):
         return func
 
     return decorator
-
-
-class DeathMenu(Menu):
-    @button("restart_button.png")
-    def restart(self):
-        self.game.running = False
-
-    @button("exit_button.png")
-    def exit(self):
-        pygame.quit()
-        exit()
-
