@@ -155,6 +155,7 @@ class Server:
                 "x": round(s.x),
                 "y": round(s.y),
                 "d": s.direction,
+                "a": s.animation,
             }
             for n, o in self.game.objects.items()
             for i, s in enumerate(getattr(o, "sprites", [o]))
@@ -247,7 +248,6 @@ class Client:
         self.game.main(self.game_loop)
 
     def sync(self):
-        """Network synchronization thread"""
         last_control_send = 0
         control_send_interval = (
             1 / 30
@@ -288,7 +288,6 @@ class Client:
             time.sleep(0.001)
 
     def game_loop(self):
-        """Main game rendering and logic loop"""
         if (
             self.game_state is None
             or self.game_state == {}
@@ -330,6 +329,7 @@ class Client:
                 sprite.x = x
                 sprite.y = y
                 sprite.direction = direction
+                sprite.animation = obj_data.get("a", sprite.animation)
             else:
                 # Create new object
                 sprite = self.game.add_object(
@@ -339,6 +339,7 @@ class Client:
                     x=x,
                     y=y,
                     direction=direction,
+                    animation=obj_data.get("a", None),
                 )
 
 

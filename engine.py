@@ -137,7 +137,7 @@ class Sprite:
             self.pos = pygame.Vector2(x, y)
         else:
             self.pos = pygame.Vector2(0, 0)
-        self.current_animation = animation or "idle"
+        self.animation = animation or "idle"
         self.current_frame = 0
         self.frame_rate = 12
 
@@ -254,19 +254,10 @@ class Sprite:
     def animate(self):
         if not self.animations:
             return
-        frames = self.animations[self.current_animation]
+        frames = self.animations[self.animation]
         frame = frames[int(self.current_frame)]
         self.current_frame = (self.current_frame + 1 / self.frame_rate) % len(frames)
         self.normal_image = pygame.transform.scale(frame, (65, 70))
-
-    @property
-    def animation(self):
-        return self.current_animation
-
-    @animation.setter
-    def animation(self, value):
-        if value in self.animations:
-            self.current_animation = value
 
 
 class MultiSprite:
