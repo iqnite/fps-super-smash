@@ -135,7 +135,7 @@ class Server:
 
     def broadcast_game_state(self):
         if self.death_menu_active:
-            data = GAME_OVER + pickle.dumps(self.alive_players[0].image_path)
+            data = GAME_OVER + json.dumps(self.alive_players[0].image_path).encode()
         else:
             game_state = self.serialize_game()
             self.sequence_number += 1
@@ -355,7 +355,7 @@ class Client:
             return
 
         if self.next_draw and self.next_draw.startswith(GAME_OVER):
-            winner = pickle.loads(self.next_draw[len(GAME_OVER) :])
+            winner = json.loads(self.next_draw[len(GAME_OVER) :])
             self.game.background_image_path = "images/Menu/Background.png"
             self.game.screen.blit(
                 pygame.font.Font("images/Anta-Regular.ttf", 74).render(
