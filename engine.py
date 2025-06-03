@@ -10,10 +10,11 @@ class Game:
         self.running = True
         self.dt = 0
         self.background = None
+        self.death_menu_active = False
+        self.death_menu = None
         if background_image_path:
             self.background = pygame.image.load(background_image_path)
             self.background = pygame.transform.scale(self.background, (self.width, self.height))
-
 
     def main(self, func=None):
         while self.running:
@@ -21,28 +22,30 @@ class Game:
         pygame.quit()
 
     def loop(self, func=None):
-        # poll for events
-        # pygame.QUIT event means the user clicked X to close your window
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+
         try:
             if self.background:
                 self.screen.blit(self.background, (0, 0))
             else:
                 self.screen.fill("black")
-            if func:
-                func()
-            for obj in list(self.objects.values()).copy():
-                if obj and obj.loop:
-                    obj.loop()
-            # flip() the display to put your work on screen
+
+            if self.death_menu_active:
+                if self.death_menu:
+                    self.death_menu.loop()
+            else:
+                if func:
+                    func()
+                for obj in list(self.objects.values()).copy():
+                    if obj and obj.loop:
+                        obj.loop()
+
             pygame.display.flip()
         except pygame.error:
             pass
-        # limits FPS to 60
-        # dt is delta time in seconds since last frame, used for framerate-
-        # independent physics.
+
         self.dt = self.clock.tick(60) / 1000
 
     def add_object(self, name, func, *args, **kwargs):
@@ -268,8 +271,8 @@ class Button(Sprite):
         self.image2 = pygame.transform.scale(
             self.image1,
             (
-                self.image1.get_width() * 1.3,
-                self.image1.get_height() * 1.3,
+                int(self.image1.get_width() * 1.3),
+                int(self.image1.get_height() * 1.3),
             ),
         )
 
@@ -295,3 +298,15 @@ def button(image_path: str):
         return func
 
     return decorator
+
+
+class DeathMenu(Menu):
+    @button("restart_button.png")
+    def restart(self):
+        self.game.running = False
+
+    @button("exit_button.png")
+    def exit(self):
+        pygame.quit()
+        exit()
+
