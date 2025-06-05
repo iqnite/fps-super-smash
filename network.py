@@ -18,7 +18,7 @@ PORT = 65432
 OK = b"OK"
 UNKNOWN = b"unknown"
 ECHO = b"echo"
-JOIN_GAME = b"join_game:"
+JOIN_GAME = b"join_game"
 GET_FRAME = b"get_frame"
 SEND_CONTROLS = b"controls:"
 WAITING = b"waiting"
@@ -30,6 +30,8 @@ BUFFER_SIZE = 65507  # Max UDP packet size
 BROADCAST_INTERVAL = 1 / 60  # 60FPS broadcast rate for smoother updates
 MAX_PACKET_AGE = 1.0  # Discard packets older than this
 USE_COMPRESSION = True  # Compress network data
+
+MAX_PLAYER_SKINS = 3
 
 
 def get_wlan_ip():
@@ -219,7 +221,7 @@ class Server:
             self.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                image_path=f"images/player{i % 2}.png",
+                image_path=f"images/player{i % MAX_PLAYER_SKINS}.png",
                 x=self.game.width / 2 + 100 * int(i),
                 y=200,
                 move_acceleration=4,
@@ -269,7 +271,7 @@ class Client:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client.settimeout(5)
         # Send join message
-        self.send_message(JOIN_GAME + f"images/player{0}.png".encode())
+        self.send_message(JOIN_GAME)
         # Wait for response
         response = self.receive_message()
         if response == GAME_ALREADY_STARTED:
