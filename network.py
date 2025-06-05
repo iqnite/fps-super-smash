@@ -154,7 +154,14 @@ class Server:
 
     def broadcast_game_state(self):
         if self.death_menu_active:
-            data = GAME_OVER + json.dumps(self.alive_players[0].image_path if len(self.alive_players) == 1 else "").encode()
+            data = (
+                GAME_OVER
+                + json.dumps(
+                    self.alive_players[0].image_path
+                    if len(self.alive_players) == 1
+                    else ""
+                ).encode()
+            )
         else:
             game_state = self.serialize_game()
             self.sequence_number += 1
