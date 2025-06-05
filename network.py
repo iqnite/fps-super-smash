@@ -8,6 +8,7 @@ import zlib
 
 import pygame
 import engine
+from engine import Menu, button
 from level import Level
 from player import Player, get_controls
 
@@ -22,6 +23,7 @@ GET_FRAME = b"get_frame"
 SEND_CONTROLS = b"controls:"
 WAITING = b"waiting"
 GAME_ALREADY_STARTED = b"game_already_started"
+GAME_OVER = b"game_over:"
 
 # UDP specific constants
 BUFFER_SIZE = 65507  # Max UDP packet size
@@ -42,6 +44,21 @@ def get_wlan_ip():
     return None
 
 
+def show_winner(game: engine.Game, winner):
+    game_over_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+        f"Game Over!", True, "white"
+    )
+    winner_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+        "wins!", True, "white"
+    )
+    game.screen.blit(game_over_text, (100, game.height / 2 - 50))
+    game.screen.blit(
+        pygame.image.load(winner) if isinstance(winner, str) else winner,
+        (100, 100 + game.height / 2),
+    )
+    game.screen.blit(winner_text, (200, 100 + game.height / 2))
+
+
 class Server:
     def __init__(self):
         self.server: socket.socket
@@ -50,6 +67,7 @@ class Server:
         self.online: bool = False
         self.game: engine.Game = engine.Game((0, 0), "images/Menu/Background.png")
         self.waiting: bool = True
+        self.death_menu_active: bool = False
         self.last_broadcast = 0
         self.sequence_number = 0
         self.last_game_state = {}  # Store previous state for delta comparison
@@ -131,13 +149,16 @@ class Server:
             self.server.sendto(UNKNOWN, client_address)
 
     def broadcast_game_state(self):
-        game_state = self.serialize_game()
-        self.sequence_number += 1
+        if self.death_menu_active:
+            data = GAME_OVER + json.dumps(self.alive_players[0].image_path).encode()
+        else:
+            game_state = self.serialize_game()
+            self.sequence_number += 1
 
-        # Binary format: (b'SEQ', sequence_number, game_state_bytes)
-        data = pickle.dumps(("SEQ", self.sequence_number, game_state))
-        if USE_COMPRESSION:
-            data = zlib.compress(data, level=1)  # Use fast compression (level 1)
+            # Binary format: (b'SEQ', sequence_number, game_state_bytes)
+            data = pickle.dumps(("SEQ", self.sequence_number, game_state))
+            if USE_COMPRESSION:
+                data = zlib.compress(data, level=1)  # Use fast compression (level 1)
 
         # Send to all clients with error handling
         # Copy list to allow modification during iteration
@@ -169,8 +190,12 @@ class Server:
             )
             self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
+        if self.death_menu_active:
+            show_winner(self.game, self.alive_players[0].image)
+            return
         if (server_player := self.players[self.server.getsockname()]) is not None:
             server_player.keyboard_control()
+        self.check_game_over()
 
     def apply_controls(self, client, data: bytes):
         if client in self.players and (player := self.players[client]) is not None:
@@ -179,6 +204,44 @@ class Server:
             except json.JSONDecodeError:
                 # Ignore invalid JSON
                 pass
+
+    def start_game(self):
+        self.game.objects.clear()
+        self.game.add_object(
+            "level",
+            Level.load,
+            pos_filepath="level.csv",
+            image_filepath="images/level/{}.png",
+            y_velocity=1,
+            common_sprite_args={"teleport": {"+y": {1080: -440}}},
+        )
+        for i, id in enumerate(self.players):
+            self.players[id] = self.game.add_object(
+                f"player{i}",
+                Player,
+                image_path=f"images/player{i % 2}.png",
+                x=self.game.width / 2 + 100 * int(i),
+                y=200,
+                move_acceleration=4,
+                friction=0.25,
+                jump_acceleration=24,
+                gravity=2,
+            )
+
+    @property
+    def alive_players(self):
+        return [
+            player
+            for player in self.players.values()
+            if player is not None and not player.dead
+        ]
+
+    def check_game_over(self):
+        if len(self.alive_players) == 1:
+            self.game.objects.clear()
+            self.game.background_image_path = "images/Menu/Background.png"
+            self.death_menu_active = True
+            self.game.add_object("death_menu", DeathMenu, server=self)
 
 
 class Client:
@@ -247,7 +310,6 @@ class Client:
         self.game.main(self.game_loop)
 
     def sync(self):
-        """Network synchronization thread"""
         last_control_send = 0
         control_send_interval = (
             1 / 30
@@ -269,6 +331,9 @@ class Client:
                 if data:
                     if data == WAITING:
                         self.next_draw = WAITING
+                    elif data.startswith(GAME_OVER):
+                        self.game.objects.clear()
+                        self.next_draw = data
                     else:
                         try:
                             if USE_COMPRESSION:
@@ -278,6 +343,7 @@ class Client:
                                 self.last_sequence = seq
                                 self.game_state = game_state
                                 self.last_update_time = time.time()
+                                self.next_draw = None  # Reset game over screen when receiving new game state
                         except (UnicodeDecodeError, pickle.PickleError) as e:
                             print(f"Error parsing game state: {e}")
                             pass
@@ -288,7 +354,6 @@ class Client:
             time.sleep(0.001)
 
     def game_loop(self):
-        """Main game rendering and logic loop"""
         if (
             self.game_state is None
             or self.game_state == {}
@@ -298,6 +363,12 @@ class Client:
                 "Waiting for players...", True, "white"
             )
             self.game.screen.blit(waiting_text, (100, self.game.height / 2))
+            return
+
+        if self.next_draw and self.next_draw.startswith(GAME_OVER):
+            winner = json.loads(self.next_draw[len(GAME_OVER) :])
+            self.game.background_image_path = "images/Menu/Background.png"
+            show_winner(self.game, winner)
             return
 
         # Update controls - do this before rendering to ensure most recent input
@@ -352,29 +423,27 @@ class ServerLobbyMenu(engine.Menu):
     @engine.button("images/Menu/Start.png")
     def start(self):
         self.game.remove_object(self)
-        self.game.add_object(
-            "level",
-            Level.load,
-            pos_filepath="level.csv",
-            image_filepath="images/level/{}.png",
-            y_velocity=1,
-            common_sprite_args={"teleport": {"+y": {1080: -440}}},
-        )
-        for i, id in enumerate(self.server.players):
-            self.server.players[id] = self.game.add_object(
-                f"player{i}",
-                Player,
-                image_path=f"images/player{i % 2}.png",
-                x=self.game.width / 2 + 100 * int(i),
-                y=200,
-                move_acceleration=4,
-                friction=0.25,
-                jump_acceleration=24,
-                gravity=2,
-            )
+        self.server.start_game()
         self.game.background_image_path = None
         self.server.waiting = False
 
     @engine.button("images/Menu/Cancel.png")
+    def exit(self):
+        self.game.running = False
+
+
+class DeathMenu(Menu):
+    def __init__(self, *args, server: Server, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.server = server
+
+    @button("images/Menu/Start.png")
+    def restart(self):
+        self.game.remove_object(self)
+        self.server.start_game()
+        self.game.background_image_path = None
+        self.server.death_menu_active = False
+
+    @button("images/Menu/Cancel.png")
     def exit(self):
         self.game.running = False

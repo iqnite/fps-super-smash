@@ -18,28 +18,26 @@ class Game:
         pygame.quit()
 
     def loop(self, func=None):
-        # poll for events
-        # pygame.QUIT event means the user clicked X to close your window
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+
         try:
             if self.background:
                 self.screen.blit(self.background, (0, 0))
             else:
                 self.screen.fill("black")
+
             if func:
                 func()
             for obj in list(self.objects.values()).copy():
                 if obj and obj.loop:
                     obj.loop()
-            # flip() the display to put your work on screen
+
             pygame.display.flip()
         except pygame.error:
             pass
-        # limits FPS to 60
-        # dt is delta time in seconds since last frame, used for framerate-
-        # independent physics.
+
         self.dt = self.clock.tick(60) / 1000
 
     def add_object(self, name, func, *args, **kwargs):
@@ -272,8 +270,8 @@ class Button(Sprite):
         self.image2 = pygame.transform.scale(
             self.image1,
             (
-                self.image1.get_width() * 1.3,
-                self.image1.get_height() * 1.3,
+                int(self.image1.get_width() * 1.3),
+                int(self.image1.get_height() * 1.3),
             ),
         )
 

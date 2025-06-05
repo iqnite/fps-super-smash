@@ -61,9 +61,6 @@ class StartMenu(engine.Menu):
         except ConnectionResetError:
             print("Connection reset by server.")
             quit()
-        except ValueError:
-            print("Invalid IP address.")
-            quit()
 
     @engine.button("images/Menu/Start.png")
     def start(self):

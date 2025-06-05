@@ -98,8 +98,12 @@ class Player(Sprite):
             self.health = 0
 
     def check_health(self):
-        if self.health <= 0:
+        if self.dead:
             self.game.remove_object(self)
+
+    @property
+    def dead(self):
+        return self.health <= 0
 
 
 def get_controls():
