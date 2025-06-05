@@ -8,8 +8,10 @@ from level import Level
 from player import Player
 import attacks
 
+# Mock pygame.mixer globally
+pygame.mixer = MagicMock()
 
-@patch("pygame.mixer")
+
 class TestGame(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
@@ -125,7 +127,6 @@ class TestSprite(unittest.TestCase):
         self.assertEqual(self.sprite.image, self.sprite.image2)
 
 
-@patch("pygame.mixer")
 class TestMultiSprite(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
@@ -213,7 +214,6 @@ class TestMultiSprite(unittest.TestCase):
             self.assertEqual(sprite.image, sprite.image2)
 
 
-@patch("pygame.mixer")
 class TestMenu(unittest.TestCase):
     class Menu1(Menu):
         @button("images/level/0.png")
@@ -240,7 +240,6 @@ class TestMenu(unittest.TestCase):
         # No assertion, just ensure no exceptions
 
 
-@patch("pygame.mixer")
 class TestPlayer(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
@@ -392,7 +391,6 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.health, 95)
 
 
-@patch("pygame.mixer")
 class TestLevel(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
@@ -430,7 +428,6 @@ class TestLevel(unittest.TestCase):
             mock_draw.assert_called_once()
 
 
-@patch("pygame.mixer")
 class TestShootAttack(unittest.TestCase):
     def setUp(self):
         self.game = Game((800, 600))
@@ -483,7 +480,6 @@ class TestShootAttack(unittest.TestCase):
         self.assertNotIn("shoot_attack", self.game.objects)
 
 
-@patch("pygame.mixer")
 class TestNetwork(unittest.TestCase):
     @patch("psutil.net_if_addrs")
     def test_get_wlan_ip(self, mock_net_if_addrs, *_):
