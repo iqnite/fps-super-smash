@@ -1,4 +1,3 @@
-from functools import cached_property
 import pygame
 
 
@@ -11,6 +10,8 @@ class Game:
         self.running = True
         self.dt = 0
         self.background_image_path = background_image_path
+        self.mixer = pygame.mixer
+        self.mixer.init()
 
     def main(self, func=None):
         while self.running:
@@ -31,7 +32,7 @@ class Game:
             if func:
                 func()
             for obj in list(self.objects.values()).copy():
-                if obj and obj.loop:
+                if obj and hasattr(obj, "loop"):
                     obj.loop()
 
             pygame.display.flip()
@@ -65,6 +66,20 @@ class Game:
             return pygame.transform.scale(
                 pygame.image.load(self.background_image_path), (self.width, self.height)
             )
+
+    def play_sound(self, sound_path, id=None):
+        sound = self.mixer.Sound(sound_path)
+        if id:
+            self.objects[id] = sound
+        sound.play()
+        return sound
+
+    def sound_loop(self, sound_path, id=None):
+        sound = self.mixer.Sound(sound_path)
+        if id:
+            self.objects[id] = sound
+        sound.play(-1)
+        return sound
 
 
 class Sprite:
@@ -237,7 +252,7 @@ class Menu:
         if x is None:
             x = game.width / 2
         if y is None:
-            y = game.height / 2 - 100
+            y = game.height / 2 - 200
         self.game = game
         self.buttons = [
             func._engine_type_(

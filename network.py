@@ -91,6 +91,7 @@ class Server:
         print("Server stopped.")
 
     def main(self):
+        self.game.sound_loop("sounds/menu_music.mp3", id="music")
         self.event_thread = threading.Thread(target=self.event_loop)
         self.event_thread.start()
         self.game.add_object("lobby", ServerLobbyMenu, server=self)
@@ -179,6 +180,7 @@ class Server:
             }
             for n, o in self.game.objects.items()
             for i, s in enumerate(getattr(o, "sprites", [o]))
+            if isinstance(s, engine.Sprite)
         }
 
         return pickle.dumps(current_state)
@@ -227,6 +229,7 @@ class Server:
                 jump_acceleration=24,
                 gravity=2,
             )
+        self.game.sound_loop("sounds/game_music.mp3", id="game_music")
 
     @property
     def alive_players(self):
@@ -238,10 +241,12 @@ class Server:
 
     def check_game_over(self):
         if len(self.alive_players) == 1:
+            self.game.objects["game_music"].stop()
             self.game.objects.clear()
             self.game.background_image_path = "images/Menu/Background.png"
             self.death_menu_active = True
             self.game.add_object("death_menu", DeathMenu, server=self)
+            self.game.play_sound("sounds/victory.mp3")
 
 
 class Client:
@@ -257,6 +262,7 @@ class Client:
         self.game_state = {}  # Current game state
         self.last_update_time = 0
         self.frame_buffer = []  # Buffer frames to smooth out network jitter
+        self.music = None
 
     def __enter__(self):
         self.connect()
@@ -359,6 +365,8 @@ class Client:
             or self.game_state == {}
             or self.next_draw == WAITING
         ):
+            if "menu_music" not in self.game.objects:
+                self.game.sound_loop("sounds/menu_music.mp3", id="menu_music")
             waiting_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
                 "Waiting for players...", True, "white"
             )
@@ -369,7 +377,16 @@ class Client:
             winner = json.loads(self.next_draw[len(GAME_OVER) :])
             self.game.background_image_path = "images/Menu/Background.png"
             show_winner(self.game, winner)
+            if self.music:
+                self.music.stop()
+                self.music = None
+                self.game.play_sound("sounds/victory.mp3")
             return
+
+        if not self.music:
+            if "menu_music" in self.game.objects:
+                self.game.objects["menu_music"].stop()
+            self.music = self.game.sound_loop("sounds/game_music.mp3", id="game_music")
 
         # Update controls - do this before rendering to ensure most recent input
         self.controls = json.dumps(get_controls()).encode()
@@ -422,6 +439,7 @@ class ServerLobbyMenu(engine.Menu):
 
     @engine.button("images/Menu/Start.png")
     def start(self):
+        self.game.objects["music"].stop()
         self.game.remove_object(self)
         self.server.start_game()
         self.game.background_image_path = None

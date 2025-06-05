@@ -18,6 +18,7 @@ class ShootAttack(Attack):
         super().__init__(*args, **kwargs)
         self.max_distance = max_distance
         self.distance = 0
+        self.game.play_sound("sounds/shoot.wav")
 
     def loop(self):
         self.x_move(self.x_velocity)
