@@ -44,6 +44,16 @@ def get_wlan_ip():
     return None
 
 
+def show_winner(game: engine.Game, winner):
+    game_over_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+        f"Game Over!", True, "white"
+    )
+    game.screen.blit(game_over_text, (100, game.height / 2 - 50))
+    game.screen.blit(
+        pygame.image.load(winner) if isinstance(winner, str) else winner, (100, 100)
+    )
+
+
 class Server:
     def __init__(self):
         self.server: socket.socket
@@ -176,11 +186,7 @@ class Server:
             self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
         if self.death_menu_active:
-            game_over_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
-                f"Game Over!", True, "white"
-            )
-            self.game.screen.blit(game_over_text, (100, self.game.height / 2 - 50))
-            self.game.screen.blit(self.alive_players[0].image, (100, 100))
+            show_winner(self.game, self.alive_players[0].image)
             return
         if (server_player := self.players[self.server.getsockname()]) is not None:
             server_player.keyboard_control()
@@ -357,13 +363,7 @@ class Client:
         if self.next_draw and self.next_draw.startswith(GAME_OVER):
             winner = json.loads(self.next_draw[len(GAME_OVER) :])
             self.game.background_image_path = "images/Menu/Background.png"
-            self.game.screen.blit(
-                pygame.font.Font("images/Anta-Regular.ttf", 74).render(
-                    "Game Over!", True, "white"
-                ),
-                (100, self.game.height / 2 - 50),
-            )
-            self.game.screen.blit(pygame.image.load(winner), (100, 100))
+            show_winner(self.game, winner)
             return
 
         # Update controls - do this before rendering to ensure most recent input
