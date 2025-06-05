@@ -44,7 +44,7 @@ def get_wlan_ip():
     return None
 
 
-def show_winner(game: engine.Game, winner):
+def show_game_over(game: engine.Game, winner=None):
     game_over_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
         f"Game Over!", True, "white"
     )
@@ -52,11 +52,12 @@ def show_winner(game: engine.Game, winner):
         "wins!", True, "white"
     )
     game.screen.blit(game_over_text, (100, game.height / 2 - 50))
-    game.screen.blit(
-        pygame.image.load(winner) if isinstance(winner, str) else winner,
-        (100, 100 + game.height / 2),
-    )
-    game.screen.blit(winner_text, (200, 100 + game.height / 2))
+    if winner:
+        game.screen.blit(
+            pygame.image.load(winner) if isinstance(winner, str) else winner,
+            (100, 100 + game.height / 2),
+        )
+        game.screen.blit(winner_text, (200, 100 + game.height / 2))
 
 
 class Server:
@@ -151,7 +152,7 @@ class Server:
 
     def broadcast_game_state(self):
         if self.death_menu_active:
-            data = GAME_OVER + json.dumps(self.alive_players[0].image_path).encode()
+            data = GAME_OVER + json.dumps(self.alive_players[0].image_path if len(self.alive_players) == 1 else "").encode()
         else:
             game_state = self.serialize_game()
             self.sequence_number += 1
@@ -193,7 +194,10 @@ class Server:
             self.game.screen.blit(ip_text, (100, self.game.height / 2))
             return
         if self.death_menu_active:
-            show_winner(self.game, self.alive_players[0].image)
+            show_game_over(
+                self.game,
+                self.alive_players[0].image if len(self.alive_players) == 1 else None,
+            )
             return
         if (server_player := self.players[self.server.getsockname()]) is not None:
             server_player.keyboard_control()
@@ -240,7 +244,7 @@ class Server:
         ]
 
     def check_game_over(self):
-        if len(self.alive_players) == 1:
+        if len(self.alive_players) <= 1:
             self.game.objects["game_music"].stop()
             self.game.objects.clear()
             self.game.background_image_path = "images/Menu/Background.png"
@@ -376,7 +380,7 @@ class Client:
         if self.next_draw and self.next_draw.startswith(GAME_OVER):
             winner = json.loads(self.next_draw[len(GAME_OVER) :])
             self.game.background_image_path = "images/Menu/Background.png"
-            show_winner(self.game, winner)
+            show_game_over(self.game, winner if len(winner) > 0 else None)
             if self.music:
                 self.music.stop()
                 self.music = None
