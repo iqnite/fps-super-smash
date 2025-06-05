@@ -31,6 +31,8 @@ BROADCAST_INTERVAL = 1 / 60  # 60FPS broadcast rate for smoother updates
 MAX_PACKET_AGE = 1.0  # Discard packets older than this
 USE_COMPRESSION = True  # Compress network data
 
+MAX_PLAYER_SKINS = 3
+
 
 def get_wlan_ip():
     for interface, addrs in psutil.net_if_addrs().items():
@@ -219,7 +221,7 @@ class Server:
             self.players[id] = self.game.add_object(
                 f"player{i}",
                 Player,
-                image_path=f"images/player{i % 3}.png",
+                image_path=f"images/player{i % MAX_PLAYER_SKINS}.png",
                 x=self.game.width / 2 + 100 * int(i),
                 y=200,
                 move_acceleration=4,
