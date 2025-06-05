@@ -247,7 +247,8 @@ class Server:
 
     def check_game_over(self):
         if len(self.alive_players) <= 1:
-            self.game.objects["game_music"].stop()
+            if "game_music" in self.game.objects:
+                self.game.objects["game_music"].stop()
             self.game.objects.clear()
             self.game.background_image_path = "images/Menu/Background.png"
             self.death_menu_active = True

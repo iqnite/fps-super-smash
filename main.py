@@ -46,7 +46,8 @@ class StartMenu(engine.Menu):
             pygame.display.update()
             clock.tick(30)
         client = network.Client(ip_input.value, network.PORT)
-        self.game.objects["music"].stop()
+        if "music" in self.game.objects:
+            self.game.objects["music"].stop()
         try:
             with client:
                 client.main()
