@@ -48,10 +48,15 @@ def show_winner(game: engine.Game, winner):
     game_over_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
         f"Game Over!", True, "white"
     )
+    winner_text = pygame.font.Font("images/Anta-Regular.ttf", 74).render(
+        "wins!", True, "white"
+    )
     game.screen.blit(game_over_text, (100, game.height / 2 - 50))
     game.screen.blit(
-        pygame.image.load(winner) if isinstance(winner, str) else winner, (100, 100)
+        pygame.image.load(winner) if isinstance(winner, str) else winner,
+        (100, 100 + game.height / 2),
     )
+    game.screen.blit(winner_text, (200, 100 + game.height / 2))
 
 
 class Server:
