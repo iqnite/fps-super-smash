@@ -46,6 +46,8 @@ class StartMenu(engine.Menu):
             pygame.display.update()
             clock.tick(30)
         client = network.Client(ip_input.value, network.PORT)
+        if "music" in self.game.objects:
+            self.game.objects["music"].stop()
         try:
             with client:
                 client.main()
@@ -66,6 +68,7 @@ class StartMenu(engine.Menu):
     def start(self):
         self.game.running = False
         server = network.Server()
+        self.game.objects["music"].stop()
         with server:
             server.main()
 
@@ -83,4 +86,5 @@ game.add_object(
     y=10,
 )
 game.add_object("StartMenu", StartMenu)
+game.sound_loop("sounds/menu_music.mp3", id="music")
 game.main()

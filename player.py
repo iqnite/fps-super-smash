@@ -100,6 +100,7 @@ class Player(Sprite):
     def check_health(self):
         if self.dead:
             self.game.remove_object(self)
+            self.game.play_sound("sounds/death.wav")
 
     @property
     def dead(self):
